@@ -1,14 +1,1118 @@
-# Welcome to your Lovable project
+# Aurumi Price Admin
+
+Build a new internal Aurumi application called:
+
+AURUMI COMMERCIAL & SUBSCRIPTION ADMIN
+
+This application has TWO related but distinct purposes:
+
+1. COMMERCIAL CONFIGURATION
+
+   Aurumi administrators define what Aurumi sells and the commercial rules.
+
+2. TENANT SUBSCRIPTION
+
+   A specific Tenant selects/purchases a plan and optional products/add-ons based on the catalogue configured above.
+
+IMPORTANT ARCHITECTURAL PRINCIPLE
+
+Do NOT treat pricing as simply a set of hard-coded pricing cards.
+
+The underlying model should be:
+
+COMMERCIAL CATALOGUE
+
+        ↓
+
+PRICING RULES
+
+        ↓
+
+TENANT SUBSCRIPTION
+
+        ↓
+
+TENANT ENTITLEMENTS
+
+        ↓
+
+USER / APP / ROLE ACCESS
+
+The public Pricing page and future checkout experience should consume this configuration rather than contain hard-coded commercial values.
+
+--------------------------------------------------
+
+PART 1 — COMMERCIAL CONFIGURATION
+
+--------------------------------------------------
+
+Create an administration area for configuring Aurumi's commercial catalogue.
+
+MAIN NAVIGATION:
+
+• Dashboard
+
+• Plans
+
+• Aurumi Apps
+
+• Connectors
+
+• Capacity & Add-ons
+
+• Markets & Pricing
+
+• Promotions
+
+• Subscription Rules
+
+• Settings
+
+--------------------------------------------------
+
+1. PLANS
+
+--------------------------------------------------
+
+Support these initial plans:
+
+• Starter
+
+• Growth
+
+• Business
+
+• Enterprise
+
+Each Plan should support configuration of:
+
+• Plan name
+
+• Short description
+
+• Public visibility
+
+• Active / inactive
+
+• Included users
+
+• Included Intelligence Capacity
+
+• Included storage
+
+• Included data-transfer capacity
+
+• Included Standard Connector quantity
+
+• Support level
+
+• Monthly price
+
+• Annual price
+
+• Annual discount
+
+• Eligible markets
+
+• Included entitlements
+
+Initial commercial positioning:
+
+Starter:
+
+• Up to 5 users
+
+Growth:
+
+• Up to 20 users
+
+Business:
+
+• Up to 50 users
+
+Enterprise:
+
+• Custom capacity / custom pricing
+
+Do not hard-code these values into UI components. Store them as configurable data.
+
+--------------------------------------------------
+
+2. AURUMI APPS
+
+--------------------------------------------------
+
+Create an App Catalogue.
+
+Every Aurumi native app should have:
+
+• App name
+
+• App ID
+
+• Category
+
+• Standard / Premium classification
+
+• Active / inactive
+
+• Public visibility
+
+• Description
+
+• Optional monthly price
+
+• Optional annual price
+
+• Eligible plans
+
+• Entitlement rules
+
+App classifications:
+
+STANDARD
+
+Standard Aurumi Apps are included with paid workspace plans.
+
+PREMIUM
+
+Premium Aurumi Apps can be purchased as add-ons.
+
+The catalogue must support the distinction between Standard and Premium even if the public website simply communicates:
+
+"All standard Aurumi apps are available with every paid workspace."
+
+The current native app categories are:
+
+• Core
+
+• Sales
+
+• Finance
+
+• Stores
+
+• Security
+
+• IT
+
+• Aurumi Internal
+
+Do not hard-code the app list into the pricing UI. The pricing website should be able to retrieve the current Standard App catalogue from this configuration.
+
+--------------------------------------------------
+
+3. CONNECTORS
+
+--------------------------------------------------
+
+Create a Connector Catalogue.
+
+Each Connector should support:
+
+• Connector name
+
+• Connector ID
+
+• Category
+
+• Status
+
+• Standard / Additional classification
+
+• Active / inactive
+
+• Public visibility
+
+• Description
+
+• Setup complexity
+
+• Monthly recurring price
+
+• One-time implementation price
+
+• Storage impact
+
+• Data-transfer impact
+
+• Intelligence / AI usage impact
+
+• Self-service or assisted setup
+
+• Whether professional services are required
+
+• Eligible plans
+
+Use customer-facing terminology such as:
+
+• Standard Connectors
+
+• Additional Connectors
+
+• Custom Connectors
+
+Avoid exposing internal engineering terminology such as "non-standard connector" unless necessary.
+
+Standard Connectors are included within plan limits.
+
+Additional / Custom Connectors may be separately priced and may require Aurumi-assisted implementation.
+
+The pricing system must support a connector having:
+
+• recurring price only
+
+• one-time setup price only
+
+• both recurring and one-time price
+
+• custom quoted price
+
+Do not assume all connectors have identical economics.
+
+--------------------------------------------------
+
+4. CAPACITY & ADD-ONS
+
+--------------------------------------------------
+
+Create a configurable catalogue of add-ons.
+
+Initial add-ons:
+
+• Extra Team Members
+
+• Extra Storage
+
+• Extra Intelligence Capacity
+
+• Extra Data Transfer
+
+Each add-on should support:
+
+• Name
+
+• Unit
+
+• Unit price
+
+• Monthly / annual pricing
+
+• Minimum quantity
+
+• Maximum quantity, if applicable
+
+• Eligible plans
+
+• Entitlement generated by purchase
+
+• Active / inactive
+
+Examples:
+
+Extra Team Members:
+
+Unit = user
+
+Extra Storage:
+
+Unit = GB or TB
+
+Extra Intelligence:
+
+Use the defined Aurumi Intelligence Capacity model rather than exposing underlying LLM/token economics.
+
+Extra Data Transfer:
+
+Use a customer-facing capacity unit rather than exposing AWS infrastructure costs.
+
+AWS storage, bandwidth and AI/token costs are internal cost drivers. They should NOT automatically become customer-facing pricing terminology.
+
+--------------------------------------------------
+
+5. MARKETS & REGIONAL PRICING
+
+--------------------------------------------------
+
+Support regional pricing for:
+
+• India
+
+• Singapore
+
+• UAE
+
+• United States
+
+• International / Rest of World
+
+Pricing should be configurable by:
+
+PRODUCT × MARKET × BILLING CYCLE
+
+Each market should support:
+
+• Currency
+
+• Monthly price
+
+• Annual price
+
+• Annual discount
+
+• Tax treatment
+
+• Tax included / excluded
+
+• Payment provider
+
+• Payment methods
+
+The public website will eventually determine the appropriate market using IP address.
+
+During development/testing, provide a country/market selector so pricing can be simulated.
+
+The country selector should be easy to remove or disable before production launch.
+
+--------------------------------------------------
+
+6. BILLING CYCLE
+
+--------------------------------------------------
+
+Support:
+
+• Monthly
+
+• Annual
+
+Annual pricing should support:
+
+• Annual billed amount
+
+• Monthly-equivalent display price
+
+• Discount percentage
+
+• Promotional annual pricing
+
+The public pricing page should be able to display:
+
+STRIKE-THROUGH MONTHLY PRICE
+
+CURRENT MONTHLY-EQUIVALENT PRICE
+
+"Billed $X annually · Save Y%"
+
+Do not hard-code these calculations into the website.
+
+--------------------------------------------------
+
+7. PROMOTIONS
+
+--------------------------------------------------
+
+Create a basic Promotions configuration area.
+
+Support:
+
+• Percentage discount
+
+• Fixed discount
+
+• First-period discount
+
+• Annual-only discount
+
+• Eligible plans
+
+• Eligible markets
+
+• Start date
+
+• End date
+
+• Active / inactive
+
+This does not need to be fully sophisticated initially, but the data model should support future promotions without redesigning pricing.
+
+--------------------------------------------------
+
+8. ENTERPRISE / CUSTOM PRICING
+
+--------------------------------------------------
+
+Enterprise must support custom configuration.
+
+Enterprise may have:
+
+• Custom user capacity
+
+• Custom app selection
+
+• Custom Premium Apps
+
+• Custom Intelligence Capacity
+
+• Custom storage
+
+• Custom data-transfer capacity
+
+• Custom connectors
+
+• Custom integrations
+
+• Advanced administration/governance
+
+• Implementation support
+
+• Premium support
+
+• SLA
+
+• Custom commercial terms
+
+Do not force Enterprise into the same rigid pricing structure as Starter/Growth/Business.
+
+--------------------------------------------------
+
+9. ENTITLEMENTS
+
+--------------------------------------------------
+
+Create an explicit entitlement model.
+
+This is extremely important.
+
+A PRICE tells us what the customer pays.
+
+An ENTITLEMENT tells Aurumi what the customer is allowed to use.
+
+For example:
+
+GROWTH PLAN
+
+may generate:
+
+• 20 included users
+
+• All Standard Aurumi Apps
+
+• Up to 3 Standard Connectors
+
+• Defined Intelligence Capacity
+
+• Defined Storage
+
+• Defined Data Transfer
+
+• Defined support level
+
+A Premium App purchase adds another entitlement.
+
+An Extra User purchase adds another entitlement.
+
+An Extra Storage purchase adds another entitlement.
+
+The application should therefore maintain:
+
+PLAN → ENTITLEMENTS
+
+and:
+
+ADD-ON → ADDITIONAL ENTITLEMENTS
+
+--------------------------------------------------
+
+PART 2 — TENANT SUBSCRIPTION
+
+--------------------------------------------------
+
+Create a separate Tenant Subscription section.
+
+This is NOT the same thing as Commercial Configuration.
+
+Commercial Configuration answers:
+
+"What does Aurumi sell?"
+
+Tenant Subscription answers:
+
+"What has this particular Tenant purchased?"
+
+The Tenant subscription record should contain:
+
+• Tenant
+
+• Plan
+
+• Market
+
+• Currency
+
+• Billing cycle
+
+• Subscription status
+
+• Included users
+
+• Additional users
+
+• Standard Apps entitlement
+
+• Premium Apps purchased
+
+• Standard Connectors purchased/allocated
+
+• Additional Connectors
+
+• Additional Intelligence Capacity
+
+• Additional Storage
+
+• Additional Data Transfer
+
+• One-time implementation charges
+
+• Recurring charges
+
+• Discounts
+
+• Tax
+
+• Billing information
+
+• Payment provider
+
+• Subscription start date
+
+• Renewal date
+
+• Cancellation status
+
+--------------------------------------------------
+
+10. TENANT SUBSCRIPTION BUILDER
+
+--------------------------------------------------
+
+Create a UI where an administrator can select a Tenant and configure their subscription.
+
+Flow:
+
+SELECT TENANT
+
+↓
+
+SELECT PLAN
+
+↓
+
+REVIEW INCLUDED ENTITLEMENTS
+
+↓
+
+OPTIONAL PREMIUM APPS
+
+↓
+
+CONNECTORS
+
+↓
+
+OPTIONAL CAPACITY ADD-ONS
+
+↓
+
+REVIEW ORDER
+
+↓
+
+CONFIRM SUBSCRIPTION
+
+The UI should dynamically calculate:
+
+• Recurring monthly amount
+
+• Annual amount
+
+• One-time charges
+
+• Discounts
+
+• Tax where applicable
+
+• Total payable
+
+Do not hard-code pricing into this interface.
+
+Retrieve prices from the Commercial Configuration catalogue.
+
+--------------------------------------------------
+
+11. SHOPPING CART / ORDER MODEL
+
+--------------------------------------------------
+
+Create an order/cart abstraction even if payment integration is initially mocked.
+
+A cart can contain:
+
+• Base Plan
+
+• Premium Apps
+
+• Additional Connectors
+
+• Extra Users
+
+• Extra Storage
+
+• Extra Intelligence Capacity
+
+• Extra Data Transfer
+
+• One-time implementation services
+
+• Discounts
+
+• Taxes
+
+Show:
+
+SUBTOTAL
+
+DISCOUNT
+
+TAX
+
+ONE-TIME CHARGES
+
+RECURRING CHARGES
+
+TOTAL
+
+Clearly distinguish one-time charges from recurring subscription charges.
+
+--------------------------------------------------
+
+12. PAYMENT ARCHITECTURE
+
+--------------------------------------------------
+
+Design the system so Stripe can be the initial payment gateway.
+
+However, DO NOT hard-code Stripe into the core pricing model.
+
+Payment provider should be configurable by market.
+
+Initial example:
+
+India → configurable payment provider
+
+Singapore → configurable payment provider
+
+UAE → configurable payment provider
+
+US → Stripe
+
+International → configurable
+
+The payment layer should eventually support:
+
+• Checkout
+
+• Payment
+
+• Subscription creation
+
+• Invoice
+
+• Payment status
+
+• Failed payment
+
+• Refund
+
+• Cancellation
+
+• Renewal
+
+For this first version, create the appropriate interfaces and data structures even if actual payment processing is mocked.
+
+--------------------------------------------------
+
+13. SUBSCRIPTION CHANGES
+
+--------------------------------------------------
+
+Prepare the model for:
+
+• Upgrade
+
+• Downgrade
+
+• Add users
+
+• Remove users
+
+• Add Premium Apps
+
+• Remove Premium Apps
+
+• Add Connectors
+
+• Remove Connectors
+
+• Add storage
+
+• Add Intelligence Capacity
+
+• Add data transfer
+
+• Cancel subscription
+
+• Reactivate subscription
+
+Do not over-engineer the billing mechanics in the first version.
+
+However, preserve fields for:
+
+• Immediate change
+
+• Next billing cycle
+
+• Proration
+
+• Effective date
+
+--------------------------------------------------
+
+14. TENANT ACCESS VS USER ACCESS
+
+--------------------------------------------------
+
+IMPORTANT:
+
+Do NOT equate:
+
+"Tenant purchased an app"
+
+with:
+
+"Every user can access the app."
+
+The hierarchy is:
+
+AURUMI CATALOGUE
+
+↓
+
+TENANT SUBSCRIPTION
+
+↓
+
+TENANT ENTITLEMENTS
+
+↓
+
+USER / ROLE ACCESS
+
+A Tenant may have access to 30 Standard Apps but its Admin may choose to expose only selected apps to particular users.
+
+A future Tenant Administration module will handle:
+
+• Users
+
+• Roles
+
+• App access
+
+• Permissions
+
+Do not build the full user-role administration system into this application unless necessary for demonstration.
+
+--------------------------------------------------
+
+15. COMMERCIAL CONFIGURATION DASHBOARD
+
+--------------------------------------------------
+
+Create a clean internal dashboard showing:
+
+• Number of active plans
+
+• Number of Standard Apps
+
+• Number of Premium Apps
+
+• Number of Standard Connectors
+
+• Number of Additional Connectors
+
+• Number of active add-ons
+
+• Number of markets
+
+• Recently changed pricing
+
+• Draft vs published configuration
+
+Include a clear concept of:
+
+DRAFT
+
+and
+
+PUBLISHED
+
+configuration.
+
+Administrators should be able to make changes without immediately changing the public pricing page.
+
+Provide:
+
+• Save Draft
+
+• Review Changes
+
+• Publish
+
+Do not implement complex version control unless required, but structure the application so this can be added later.
+
+--------------------------------------------------
+
+16. PUBLIC WEBSITE INTEGRATION
+
+--------------------------------------------------
+
+The existing Aurumi public website should eventually consume this configuration.
+
+The following should NOT be hard-coded in the public website:
+
+• Plan prices
+
+• Annual discounts
+
+• App lists
+
+• Connector limits
+
+• Add-on prices
+
+• Regional prices
+
+• Premium App prices
+
+The website should retrieve these from the commercial configuration.
+
+The current public pricing page remains the visual reference.
+
+Maintain the existing Aurumi website visual language for any customer-facing screens.
+
+For this internal configuration application, prioritize clarity and operational usability over marketing presentation.
+
+--------------------------------------------------
+
+17. INITIAL DATA
+
+--------------------------------------------------
+
+Seed the application with the current Aurumi commercial structure:
+
+PLANS:
+
+• Starter
+
+• Growth
+
+• Business
+
+• Enterprise
+
+STARTER:
+
+• Up to 5 users
+
+GROWTH:
+
+• Up to 20 users
+
+BUSINESS:
+
+• Up to 50 users
+
+ENTERPRISE:
+
+• Custom
+
+APPS:
+
+Use the current Aurumi Native Apps catalogue.
+
+Classify apps according to:
+
+• Core
+
+• Sales
+
+• Finance
+
+• Stores
+
+• Security
+
+• IT
+
+• Aurumi Internal
+
+Support Standard and Premium classifications.
+
+CONNECTORS:
+
+Support Standard and Additional/Custom classifications.
+
+ADD-ONS:
+
+• Extra Team Members
+
+• Extra Storage
+
+• Extra Intelligence Capacity
+
+• Extra Data Transfer
+
+MARKETS:
+
+• India
+
+• Singapore
+
+• UAE
+
+• United States
+
+• International
+
+--------------------------------------------------
+
+18. UX PRINCIPLES
+
+--------------------------------------------------
+
+This is an internal commercial administration tool, not a marketing website.
+
+Use a clear admin-oriented layout.
+
+Prioritize:
+
+• Easy scanning
+
+• Tables where appropriate
+
+• Forms for configuration
+
+• Clear status indicators
+
+• Clear distinction between recurring and one-time charges
+
+• Clear distinction between catalogue configuration and Tenant subscription
+
+• Clear distinction between price and entitlement
+
+Avoid unnecessary visual complexity.
+
+However, retain Aurumi's overall visual identity and typography so the application feels like part of the Aurumi product family.
+
+--------------------------------------------------
+
+19. IMPORTANT — BUILD SEQUENCE
+
+--------------------------------------------------
+
+Do NOT attempt to build a complete production billing platform in this first iteration.
+
+Build in this order:
+
+PHASE 1
+
+Commercial Catalogue
+
+• Plans
+
+• Apps
+
+• Connectors
+
+• Capacity
+
+• Add-ons
+
+• Markets
+
+• Pricing
+
+• Entitlements
+
+PHASE 2
+
+Tenant Subscription Builder
+
+• Select Tenant
+
+• Select Plan
+
+• Select optional products
+
+• Calculate pricing
+
+• Generate subscription configuration
+
+• Generate entitlements
+
+PHASE 3
+
+Cart / Checkout abstraction
+
+• Cart
+
+• Order
+
+• Payment-provider abstraction
+
+• Mock checkout
+
+PHASE 4
+
+Actual payment integration
+
+• Stripe initially
+
+• Country-specific payment providers where required
+
+PHASE 5
+
+Provisioning
+
+• Convert subscription into Tenant entitlements
+
+• Connect to Tenant/User/App/Role administration
+
+For now, make the application fully usable with mocked data and simulated checkout where actual backend/payment infrastructure does not yet exist.
+
+Do not create fake production payment transactions.
+
+The primary objective of this version is to establish the correct commercial model, configuration experience, Tenant subscription experience, and entitlement architecture.
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/7e2b0bc9-77d4-4e38-8483-bedeb14f579a).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +1124,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
