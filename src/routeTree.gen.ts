@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AddonsRouteImport } from './routes/addons'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as ConnectorsRouteImport } from './routes/connectors'
+import { Route as MarketsRouteImport } from './routes/markets'
 import { Route as PlansRouteImport } from './routes/plans'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const ConnectorsRoute = ConnectorsRouteImport.update({
   path: '/connectors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketsRoute = MarketsRouteImport.update({
+  id: '/markets',
+  path: '/markets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlansRoute = PlansRouteImport.update({
   id: '/plans',
   path: '/plans',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
   '/connectors': typeof ConnectorsRoute
+  '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
   '/connectors': typeof ConnectorsRoute
+  '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,22 @@ export interface FileRoutesById {
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
   '/connectors': typeof ConnectorsRoute
+  '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/addons' | '/apps' | '/connectors' | '/plans'
+  fullPaths: '/' | '/addons' | '/apps' | '/connectors' | '/markets' | '/plans'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/addons' | '/apps' | '/connectors' | '/plans'
-  id: '__root__' | '/' | '/addons' | '/apps' | '/connectors' | '/plans'
+  to: '/' | '/addons' | '/apps' | '/connectors' | '/markets' | '/plans'
+  id:
+    | '__root__'
+    | '/'
+    | '/addons'
+    | '/apps'
+    | '/connectors'
+    | '/markets'
+    | '/plans'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +92,7 @@ export interface RootRouteChildren {
   AddonsRoute: typeof AddonsRoute
   AppsRoute: typeof AppsRoute
   ConnectorsRoute: typeof ConnectorsRoute
+  MarketsRoute: typeof MarketsRoute
   PlansRoute: typeof PlansRoute
 }
 
@@ -109,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/markets': {
+      id: '/markets'
+      path: '/markets'
+      fullPath: '/markets'
+      preLoaderRoute: typeof MarketsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/plans': {
       id: '/plans'
       path: '/plans'
@@ -124,6 +148,7 @@ const rootRouteChildren: RootRouteChildren = {
   AddonsRoute: AddonsRoute,
   AppsRoute: AppsRoute,
   ConnectorsRoute: ConnectorsRoute,
+  MarketsRoute: MarketsRoute,
   PlansRoute: PlansRoute,
 }
 export const routeTree = rootRouteImport
