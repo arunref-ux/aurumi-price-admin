@@ -58,6 +58,14 @@ export function requiresQuote(catalogue: Catalogue, sel: Selection): boolean {
   return quoteReasons(catalogue, sel).length > 0;
 }
 
+/**
+ * A bespoke-commercial-treatment connector whose amount cannot be calculated
+ * in this selection must be quoted — never charged as $0 or sent to payment.
+ */
+export function connectorRequiresQuote(catalogue: Catalogue, c: Connector, sel: Selection): boolean {
+  return Boolean(c.customCommercialTreatment) && !c.quoteOnly && !hasCalculableAmount(catalogue, c, sel);
+}
+
 /** Add-ons with a non-zero quantity that the current plan/market no longer allows. */
 export function ineligibleAddOnSelections(catalogue: Catalogue, sel: Selection) {
   const out: { id: string; name: string; quantity: number; reason: string }[] = [];
