@@ -10,33 +10,180 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AddonsRouteImport } from './routes/addons'
+import { Route as AppsRouteImport } from './routes/apps'
+import { Route as ChangesRouteImport } from './routes/changes'
+import { Route as ConnectorsRouteImport } from './routes/connectors'
+import { Route as EntitlementsRouteImport } from './routes/entitlements'
+import { Route as MarketsRouteImport } from './routes/markets'
+import { Route as PlansRouteImport } from './routes/plans'
+import { Route as PromotionsRouteImport } from './routes/promotions'
+import { Route as RulesRouteImport } from './routes/rules'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SubscriptionsNewRouteImport } from './routes/subscriptions.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AddonsRoute = AddonsRouteImport.update({
+  id: '/addons',
+  path: '/addons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppsRoute = AppsRouteImport.update({
+  id: '/apps',
+  path: '/apps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangesRoute = ChangesRouteImport.update({
+  id: '/changes',
+  path: '/changes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectorsRoute = ConnectorsRouteImport.update({
+  id: '/connectors',
+  path: '/connectors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntitlementsRoute = EntitlementsRouteImport.update({
+  id: '/entitlements',
+  path: '/entitlements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketsRoute = MarketsRouteImport.update({
+  id: '/markets',
+  path: '/markets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PromotionsRoute = PromotionsRouteImport.update({
+  id: '/promotions',
+  path: '/promotions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RulesRoute = RulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubscriptionsNewRoute = SubscriptionsNewRouteImport.update({
+  id: '/subscriptions/new',
+  path: '/subscriptions/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/addons': typeof AddonsRoute
+  '/apps': typeof AppsRoute
+  '/changes': typeof ChangesRoute
+  '/connectors': typeof ConnectorsRoute
+  '/entitlements': typeof EntitlementsRoute
+  '/markets': typeof MarketsRoute
+  '/plans': typeof PlansRoute
+  '/promotions': typeof PromotionsRoute
+  '/rules': typeof RulesRoute
+  '/settings': typeof SettingsRoute
+  '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/addons': typeof AddonsRoute
+  '/apps': typeof AppsRoute
+  '/changes': typeof ChangesRoute
+  '/connectors': typeof ConnectorsRoute
+  '/entitlements': typeof EntitlementsRoute
+  '/markets': typeof MarketsRoute
+  '/plans': typeof PlansRoute
+  '/promotions': typeof PromotionsRoute
+  '/rules': typeof RulesRoute
+  '/settings': typeof SettingsRoute
+  '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/addons': typeof AddonsRoute
+  '/apps': typeof AppsRoute
+  '/changes': typeof ChangesRoute
+  '/connectors': typeof ConnectorsRoute
+  '/entitlements': typeof EntitlementsRoute
+  '/markets': typeof MarketsRoute
+  '/plans': typeof PlansRoute
+  '/promotions': typeof PromotionsRoute
+  '/rules': typeof RulesRoute
+  '/settings': typeof SettingsRoute
+  '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/addons'
+    | '/apps'
+    | '/changes'
+    | '/connectors'
+    | '/entitlements'
+    | '/markets'
+    | '/plans'
+    | '/promotions'
+    | '/rules'
+    | '/settings'
+    | '/subscriptions/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/addons'
+    | '/apps'
+    | '/changes'
+    | '/connectors'
+    | '/entitlements'
+    | '/markets'
+    | '/plans'
+    | '/promotions'
+    | '/rules'
+    | '/settings'
+    | '/subscriptions/new'
+  id:
+    | '__root__'
+    | '/'
+    | '/addons'
+    | '/apps'
+    | '/changes'
+    | '/connectors'
+    | '/entitlements'
+    | '/markets'
+    | '/plans'
+    | '/promotions'
+    | '/rules'
+    | '/settings'
+    | '/subscriptions/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AddonsRoute: typeof AddonsRoute
+  AppsRoute: typeof AppsRoute
+  ChangesRoute: typeof ChangesRoute
+  ConnectorsRoute: typeof ConnectorsRoute
+  EntitlementsRoute: typeof EntitlementsRoute
+  MarketsRoute: typeof MarketsRoute
+  PlansRoute: typeof PlansRoute
+  PromotionsRoute: typeof PromotionsRoute
+  RulesRoute: typeof RulesRoute
+  SettingsRoute: typeof SettingsRoute
+  SubscriptionsNewRoute: typeof SubscriptionsNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +195,99 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/addons': {
+      id: '/addons'
+      path: '/addons'
+      fullPath: '/addons'
+      preLoaderRoute: typeof AddonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apps': {
+      id: '/apps'
+      path: '/apps'
+      fullPath: '/apps'
+      preLoaderRoute: typeof AppsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changes': {
+      id: '/changes'
+      path: '/changes'
+      fullPath: '/changes'
+      preLoaderRoute: typeof ChangesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connectors': {
+      id: '/connectors'
+      path: '/connectors'
+      fullPath: '/connectors'
+      preLoaderRoute: typeof ConnectorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entitlements': {
+      id: '/entitlements'
+      path: '/entitlements'
+      fullPath: '/entitlements'
+      preLoaderRoute: typeof EntitlementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/markets': {
+      id: '/markets'
+      path: '/markets'
+      fullPath: '/markets'
+      preLoaderRoute: typeof MarketsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/promotions': {
+      id: '/promotions'
+      path: '/promotions'
+      fullPath: '/promotions'
+      preLoaderRoute: typeof PromotionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rules': {
+      id: '/rules'
+      path: '/rules'
+      fullPath: '/rules'
+      preLoaderRoute: typeof RulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subscriptions/new': {
+      id: '/subscriptions/new'
+      path: '/subscriptions/new'
+      fullPath: '/subscriptions/new'
+      preLoaderRoute: typeof SubscriptionsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AddonsRoute: AddonsRoute,
+  AppsRoute: AppsRoute,
+  ChangesRoute: ChangesRoute,
+  ConnectorsRoute: ConnectorsRoute,
+  EntitlementsRoute: EntitlementsRoute,
+  MarketsRoute: MarketsRoute,
+  PlansRoute: PlansRoute,
+  PromotionsRoute: PromotionsRoute,
+  RulesRoute: RulesRoute,
+  SettingsRoute: SettingsRoute,
+  SubscriptionsNewRoute: SubscriptionsNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
