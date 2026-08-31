@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AdminLayout, PageHeader } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCommerce } from "@/lib/commerce/store";
 import { activePromotions, findPrice, formatMoney } from "@/lib/commerce/pricing";
 import { addOnCapacities, buildQuote, CHARGE_CLASS_LABEL } from "@/lib/commerce/cart";
-import { validateSelection, type Selection } from "@/lib/commerce/validation";
+import {
+  ineligibleAddOnSelections,
+  quoteReasons,
+  validateSelection,
+  type Selection,
+} from "@/lib/commerce/validation";
 import { deriveEntitlements, ENTITLEMENT_LABELS, summariseEntitlements } from "@/lib/commerce/entitlements";
 import type { BillingCycle, MarketId, TenantSubscription } from "@/lib/commerce/types";
 import { toast } from "sonner";
@@ -59,6 +64,32 @@ function BuilderPage() {
   const issues = useMemo(() => validateSelection(catalogue, selection), [catalogue, JSON.stringify(selection)]);
   const errors = issues.filter((i) => i.severity === "error");
   const warnings = issues.filter((i) => i.severity === "warning");
+
+  const invalidAddOns = useMemo(
+    () => ineligibleAddOnSelections(catalogue, selection),
+    [catalogue, JSON.stringify(selection)],
+  );
+  const quoteWhy = useMemo(() => quoteReasons(catalogue, selection), [catalogue, JSON.stringify(selection)]);
+  const needsQuote = quoteWhy.length > 0;
+
+  // Surface add-ons that became ineligible after a plan or market change.
+  const eligibilityKey = `${planId}|${market}`;
+  const lastEligibilityKey = useRef(eligibilityKey);
+  useEffect(() => {
+    if (lastEligibilityKey.current === eligibilityKey) return;
+    lastEligibilityKey.current = eligibilityKey;
+    if (invalidAddOns.length) {
+      toast.warning(
+        `${invalidAddOns.length} selected add-on(s) are not available for this plan/market — review the Capacity step.`,
+      );
+    }
+  }, [eligibilityKey, invalidAddOns.length]);
+
+  const clearAddOn = (id: string) => {
+    const next = { ...addonQty };
+    delete next[id];
+    setAddonQty(next);
+  };
 
   const promos = plan ? activePromotions(catalogue, plan.id, market, cycle, promoCode || null) : [];
   const { lines, totals } = useMemo(
