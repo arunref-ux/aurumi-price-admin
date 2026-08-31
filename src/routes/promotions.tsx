@@ -114,10 +114,19 @@ function PromotionsPage() {
                   <Label className="text-xs text-muted-foreground">Value</Label>
                   <Input
                     type="number"
+                    min={0}
+                    max={p.type === "fixed" ? undefined : 100}
+                    aria-invalid={p.value < 0 || (p.type !== "fixed" && p.value > 100)}
                     className="tabular"
                     value={p.value}
-                    onChange={(e) => patch(p.id, { value: Number(e.target.value) }, "Promotion value")}
+                    onChange={(e) => patch(p.id, { value: Math.max(0, Number(e.target.value)) }, "Promotion value")}
                   />
+                  {p.type !== "fixed" && p.value > 100 ? (
+                    <p className="text-xs text-destructive">Percentage discounts must be 100% or less.</p>
+                  ) : null}
+                  {p.endDate < p.startDate ? (
+                    <p className="text-xs text-destructive">End date is before the start date.</p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Start date</Label>

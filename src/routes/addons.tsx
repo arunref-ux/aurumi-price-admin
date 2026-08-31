@@ -105,7 +105,9 @@ function AddOnsPage() {
                       className="tabular"
                       value={rule?.monthly ?? ""}
                       onChange={(e) =>
-                        setPrice(a.id, { monthly: e.target.value === "" ? null : Number(e.target.value) })
+                        setPrice(a.id, {
+                          monthly: e.target.value === "" ? null : Math.max(0, Number(e.target.value)),
+                        })
                       }
                     />
                   </Small>

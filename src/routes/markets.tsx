@@ -90,10 +90,17 @@ function MarketsPage() {
                   <Label className="text-xs text-muted-foreground">{m.taxName} rate %</Label>
                   <Input
                     type="number"
+                    min={0}
+                    max={100}
+                    aria-invalid={m.taxRatePct < 0 || m.taxRatePct > 100}
                     className="tabular"
                     value={m.taxRatePct}
                     onChange={(e) =>
-                      patchMarket(m.id, { taxRatePct: Number(e.target.value) }, `${m.name} tax rate`)
+                      patchMarket(
+                        m.id,
+                        { taxRatePct: Math.min(100, Math.max(0, Number(e.target.value))) },
+                        `${m.name} tax rate`,
+                      )
                     }
                   />
                 </div>
