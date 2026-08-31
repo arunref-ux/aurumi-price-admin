@@ -20,6 +20,7 @@ import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PromotionsRouteImport } from './routes/promotions'
 import { Route as RulesRouteImport } from './routes/rules'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SubscriptionsNewRouteImport } from './routes/subscriptions.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +77,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SubscriptionsNewRoute = SubscriptionsNewRouteImport.update({
+  id: '/subscriptions/new',
+  path: '/subscriptions/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/promotions': typeof PromotionsRoute
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
+  '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/promotions': typeof PromotionsRoute
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
+  '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/promotions': typeof PromotionsRoute
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
+  '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/promotions'
     | '/rules'
     | '/settings'
+    | '/subscriptions/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/promotions'
     | '/rules'
     | '/settings'
+    | '/subscriptions/new'
   id:
     | '__root__'
     | '/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/promotions'
     | '/rules'
     | '/settings'
+    | '/subscriptions/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +183,7 @@ export interface RootRouteChildren {
   PromotionsRoute: typeof PromotionsRoute
   RulesRoute: typeof RulesRoute
   SettingsRoute: typeof SettingsRoute
+  SubscriptionsNewRoute: typeof SubscriptionsNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/subscriptions/new': {
+      id: '/subscriptions/new'
+      path: '/subscriptions/new'
+      fullPath: '/subscriptions/new'
+      preLoaderRoute: typeof SubscriptionsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -267,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   PromotionsRoute: PromotionsRoute,
   RulesRoute: RulesRoute,
   SettingsRoute: SettingsRoute,
+  SubscriptionsNewRoute: SubscriptionsNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
