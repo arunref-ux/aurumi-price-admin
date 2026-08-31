@@ -449,7 +449,10 @@ function BuilderPage() {
                         </span>
                         <span className="shrink-0 text-right text-xs tabular">
                           <Badge variant={badge === "Included" ? "secondary" : "outline"}>{badge}</Badge>
-                          {c.hasRecurringPrice && !c.quoteOnly ? (
+                          {connQuote && !c.quoteOnly ? (
+                            <div className="mt-1 text-muted-foreground">Custom pricing — quote required</div>
+                          ) : null}
+                          {c.hasRecurringPrice && !connQuote ? (
                             <div className="mt-1">
                               {formatMoney(
                                 cycle === "monthly" ? (rec?.monthly ?? null) : (rec?.annual ?? null),
