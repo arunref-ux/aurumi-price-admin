@@ -202,9 +202,25 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
       catalogueIssues,
       canPublish: !catalogueIssues.some((i) => i.severity === "error"),
       reset,
+      migration,
+      migrateLegacyData,
+      startFresh,
     }),
-    [state, updateDraft, publish, discardDraft, saveSubscription, updateSubscription, catalogueIssues, reset],
+    [
+      state,
+      updateDraft,
+      publish,
+      discardDraft,
+      saveSubscription,
+      updateSubscription,
+      catalogueIssues,
+      reset,
+      migration,
+      migrateLegacyData,
+      startFresh,
+    ],
   );
+
 
   return <CommerceContext.Provider value={value}>{children}</CommerceContext.Provider>;
 }
