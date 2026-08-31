@@ -390,5 +390,116 @@ export function validateCatalogue(catalogue: Catalogue): Issue[] {
     }
   }
 
+  // Every sellable Additional / Custom Connector needs an explicit commercial treatment.
+  for (const c of catalogue.connectors.filter(
+    (x) => x.active && x.classification !== "Standard" && x.status !== "Planned" && x.status !== "Deprecated",
+  )) {
+    const treated =
+      c.hasRecurringPrice ||
+      c.hasOneTimePrice ||
+      c.quoteOnly ||
+      Boolean(c.customCommercialTreatment && c.customCommercialTreatment.trim());
+    if (!treated) {
+      issues.push({
+        id: `conn.treatment:${c.id}`,
+        severity: "error",
+        message: `${c.classification} Connector ${c.name} has no commercial treatment`,
+        reason:
+          "A sellable Additional/Custom Connector must have a recurring price, a one-time implementation price, be quote-only, or state an explicit custom commercial treatment.",
+      });
+    }
+  }
+
+  // Price integrity: amounts must be finite and non-negative.
+  for (const r of catalogue.prices) {
+    const bad = ([["monthly", r.monthly], ["annual", r.annual]] as const).filter(
+      ([, v]) => v !== null && (!Number.isFinite(v) || (v as number) < 0),
+    );
+    for (const [field] of bad) {
+      issues.push({
+        id: `price.invalid:${r.productId}:${r.market}:${field}`,
+        severity: "error",
+        message: `${r.productId} has an invalid ${field} price in ${r.market}`,
+        reason: "Prices must be finite, non-negative numbers.",
+      });
+    }
+    if (!Number.isFinite(r.annualDiscountPct) || r.annualDiscountPct < 0 || r.annualDiscountPct > 100) {
+      issues.push({
+        id: `price.discount:${r.productId}:${r.market}`,
+        severity: "error",
+        message: `${r.productId} has an invalid annual discount in ${r.market}`,
+        reason: "Annual discount must be between 0 and 100 percent.",
+      });
+    }
+  }
+
+  // Add-on quantity integrity.
+  for (const a of catalogue.addOns.filter((x) => x.active)) {
+    const ints: [string, number][] = [
+      ["unit size", a.unitSize],
+      ["increment", a.quantityStep],
+      ["minimum quantity", a.minQuantity],
+    ];
+    if (a.maxQuantity !== null) ints.push(["maximum quantity", a.maxQuantity]);
+    for (const [label, v] of ints) {
+      if (!Number.isFinite(v) || v < 0 || !Number.isInteger(v)) {
+        issues.push({
+          id: `addon.qty:${a.id}:${label}`,
+          severity: "error",
+          message: `${a.name} has an invalid ${label}`,
+          reason: "Quantities must be whole, finite, non-negative numbers.",
+        });
+      }
+    }
+  }
+
+  // Plan capacity integrity.
+  for (const p of catalogue.plans.filter((x) => x.active && !x.custom)) {
+    for (const [label, v] of [
+      ["included users", p.includedUsers],
+      ["Intelligence capacity", p.includedIntelligence],
+      ["storage", p.includedStorageGb],
+      ["data transfer", p.includedTransferGb],
+      ["included Standard Connectors", p.includedStandardConnectors],
+    ] as const) {
+      if (v !== null && v !== undefined && (!Number.isFinite(v) || v < 0)) {
+        issues.push({
+          id: `plan.badcapacity:${p.id}:${label}`,
+          severity: "error",
+          message: `${p.name} has an invalid ${label}`,
+          reason: "Capacity values must be finite and non-negative.",
+        });
+      }
+    }
+  }
+
+  // Promotion value integrity.
+  for (const p of catalogue.promotions.filter((x) => x.active)) {
+    if (!Number.isFinite(p.value) || p.value < 0) {
+      issues.push({
+        id: `promo.value:${p.id}`,
+        severity: "error",
+        message: `Promotion ${p.name} has an invalid value`,
+        reason: "Discount values must be finite and non-negative.",
+      });
+    } else if ((p.type === "percentage" || p.type === "first_period") && p.value > 100) {
+      issues.push({
+        id: `promo.pct:${p.id}`,
+        severity: "error",
+        message: `Promotion ${p.name} discounts more than 100%`,
+        reason: "Percentage discounts must be between 0 and 100.",
+      });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(p.endDate)) {
+      issues.push({
+        id: `promo.datefmt:${p.id}`,
+        severity: "error",
+        message: `Promotion ${p.name} has an invalid date`,
+        reason: "Start and end dates must be valid calendar dates (YYYY-MM-DD).",
+      });
+    }
+  }
+
   return issues;
+
 }
