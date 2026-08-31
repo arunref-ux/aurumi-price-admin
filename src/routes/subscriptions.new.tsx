@@ -581,15 +581,49 @@ function BuilderPage() {
                   ))}
                 </div>
                 <Separator />
-                <p className="text-xs text-muted-foreground">
-                  Payment provider for {marketRow.name}: <strong>{marketRow.paymentProvider}</strong>. Checkout is
-                  <strong> simulated</strong> in this prototype — confirming records the subscription as
-                  <strong> pending payment</strong>. A real payment provider will determine the verified payment state
-                  in a later phase. No card details are collected.
-                </p>
-                <Button className="w-full" onClick={confirm} disabled={!tenant || !plan || errors.length > 0}>
-                  {errors.length ? `Resolve ${errors.length} blocking issue(s)` : "Create subscription (simulated)"}
-                </Button>
+                {needsQuote ? (
+                  <div className="rounded-md border bg-secondary px-3 py-2 text-xs">
+                    <div className="text-sm font-medium">Quote required</div>
+                    <p className="mt-1 text-muted-foreground">
+                      Your configuration includes custom pricing. An Aurumi representative will prepare a quote. No
+                      simulated payment is taken for this configuration.
+                    </p>
+                    <ul className="mt-1 list-disc pl-4 text-muted-foreground">
+                      {quoteWhy.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Payment provider for {marketRow.name}: <strong>{marketRow.paymentProvider}</strong>. Checkout is
+                    <strong> simulated</strong> in this prototype — confirming records the subscription as
+                    <strong> pending payment</strong>. A real payment provider will determine the verified payment
+                    state in a later phase. No card details are collected.
+                  </p>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="outline"
+                    className="sm:flex-1"
+                    onClick={() => confirm("draft")}
+                    disabled={!tenant || !plan}
+                  >
+                    Save as draft
+                  </Button>
+                  <Button
+                    className="sm:flex-1"
+                    onClick={() => confirm("commit")}
+                    disabled={!tenant || !plan || errors.length > 0}
+                  >
+                    {errors.length
+                      ? `Resolve ${errors.length} blocking issue(s)`
+                      : needsQuote
+                        ? "Request quote"
+                        : "Confirm — proceed to simulated payment"}
+                  </Button>
+                </div>
+
               </div>
             ) : null}
 
