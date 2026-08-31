@@ -115,17 +115,22 @@ export function buildLines(catalogue: Catalogue, sel: Selection): PricedLine[] {
     }
 
     if (c.hasOneTimePrice) {
-      lines.push({
-        id: `conn-setup-${id}`,
-        productId: `${id}:setup`,
-        kind: "connector_setup",
-        label: `Implementation · ${c.name}`,
-        quantity: 1,
-        unitAmount: amountFor(`${id}:setup`, false) ?? 0,
-        recurring: false,
-        quoteOnly: c.quoteOnly,
-        chargeClass: c.quoteOnly ? "custom_quote" : "additional_charge",
-      });
+      const setupAmount = amountFor(`${id}:setup`, false);
+      // Bespoke connectors with no calculable setup fee are covered by the
+      // quote-required line above — never emit a misleading $0 charge.
+      if (setupAmount !== null || !c.customCommercialTreatment) {
+        lines.push({
+          id: `conn-setup-${id}`,
+          productId: `${id}:setup`,
+          kind: "connector_setup",
+          label: `Implementation · ${c.name}`,
+          quantity: 1,
+          unitAmount: setupAmount ?? 0,
+          recurring: false,
+          quoteOnly: c.quoteOnly,
+          chargeClass: c.quoteOnly ? "custom_quote" : "additional_charge",
+        });
+      }
     }
   }
 
