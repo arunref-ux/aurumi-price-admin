@@ -59,29 +59,77 @@ interface CommerceContextValue {
   catalogueIssues: Issue[];
   canPublish: boolean;
   reset: () => void;
+  /** Prototype storage migration (v1 → v2). */
+  migration: MigrationState;
+  migrateLegacyData: () => void;
+  startFresh: () => void;
 }
 
 const CommerceContext = createContext<CommerceContextValue | null>(null);
 
 export function CommerceProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CommerceState>(() => seedState());
+  const [hydrated, setHydrated] = useState(false);
+  const [migration, setMigration] = useState<MigrationState>({ kind: "none" });
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setState(JSON.parse(raw) as CommerceState);
+      if (raw) {
+        setState(JSON.parse(raw) as CommerceState);
+        setHydrated(true);
+        return;
+      }
+      if (localStorage.getItem(LEGACY_STORAGE_KEY)) {
+        // Do not persist v2 yet — the user must choose migrate or start fresh.
+        setMigration({ kind: "offered" });
+        return;
+      }
     } catch {
       /* ignore corrupt storage */
     }
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       /* ignore quota */
     }
-  }, [state]);
+  }, [state, hydrated]);
+
+  const migrateLegacyData = useCallback(() => {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const migrated = raw ? migrateV1(raw, seedState()) : null;
+    if (migrated) {
+      setState({
+        ...migrated,
+        changeLog: [
+          {
+            id: crypto.randomUUID(),
+            at: new Date().toISOString(),
+            entity: "Configuration",
+            summary: "Prototype data migrated from storage format v1 to v2",
+          },
+          ...migrated.changeLog,
+        ].slice(0, 50),
+      });
+      setMigration({ kind: "migrated" });
+    } else {
+      setMigration({ kind: "dismissed" });
+    }
+    setHydrated(true);
+  }, []);
+
+  const startFresh = useCallback(() => {
+    setState(seedState());
+    setMigration({ kind: "dismissed" });
+    setHydrated(true);
+  }, []);
+
+
 
   const updateDraft = useCallback(
     (fn: (draft: Catalogue) => Catalogue, summary: string, entity: string) => {
