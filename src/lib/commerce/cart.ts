@@ -98,6 +98,20 @@ export function buildLines(catalogue: Catalogue, sel: Selection): PricedLine[] {
         quoteOnly: true,
         chargeClass: "custom_quote",
       });
+    } else if (c.customCommercialTreatment) {
+      // Bespoke commercial treatment with no calculable price: show a visible
+      // quote-required line — never a misleading $0, never payable.
+      lines.push({
+        id: `conn-quote-${id}`,
+        productId: id,
+        kind: "connector",
+        label: `${c.classification} Connector · ${c.name}`,
+        quantity: 1,
+        unitAmount: 0,
+        recurring: true,
+        quoteOnly: true,
+        chargeClass: "custom_quote",
+      });
     }
 
     if (c.hasOneTimePrice) {
