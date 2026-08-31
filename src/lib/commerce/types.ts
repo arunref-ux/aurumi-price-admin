@@ -62,7 +62,6 @@ export interface Plan {
   includedStandardConnectors: number | null;
   supportLevel: SupportLevel;
   eligibleMarkets: MarketId[];
-  entitlements: Entitlement[];
   order: number;
 }
 
@@ -126,9 +125,15 @@ export interface AddOn {
   description: string;
   unit: AddOnUnit;
   unitLabel: string;
+  /** Units of capacity delivered per purchased quantity (e.g. 1 unit = 100 GB). */
+  unitSize: number;
+  /** Quantity must be a multiple of this (e.g. users sold in 10-user increments). */
+  quantityStep: number;
   minQuantity: number;
   maxQuantity: number | null;
+  recurring: boolean;
   eligiblePlans: string[];
+  eligibleMarkets: MarketId[];
   active: boolean;
   entitlement: Entitlement;
 }
@@ -182,6 +187,8 @@ export interface Settings {
 }
 
 export interface Catalogue {
+  /** Simulated catalogue version — incremented on every publish. */
+  version: number;
   plans: Plan[];
   apps: AurumiApp[];
   connectors: Connector[];
@@ -232,10 +239,22 @@ export interface OrderTotals {
 
 export type SubscriptionStatus =
   | "draft"
+  | "pending_payment"
   | "active"
-  | "past_due"
+  | "payment_failed"
+  | "pending_cancellation"
   | "cancelled"
-  | "pending_cancellation";
+  | "expired";
+
+/**
+ * Simulated payment only. A real payment provider will own this state in a
+ * later phase — nothing here represents a verified real-world payment.
+ */
+export type SimulatedPaymentStatus =
+  | "not_required"
+  | "awaiting_simulated_payment"
+  | "simulated_paid"
+  | "simulated_failed";
 
 export interface TenantSubscription {
   id: string;
@@ -257,8 +276,12 @@ export interface TenantSubscription {
   lines: CartLine[];
   totals: OrderTotals;
   promotionCode: string | null;
+  /** Catalogue version this subscription was created from. */
+  catalogueVersion: number;
   paymentProvider: string;
-  paymentStatus: "mock_paid" | "pending" | "failed" | "not_required";
+  /** Always "simulated" in this prototype. */
+  paymentMode: "simulated";
+  paymentStatus: SimulatedPaymentStatus;
   startDate: string;
   renewalDate: string;
   cancellationRequested: boolean;
@@ -281,6 +304,10 @@ export interface SubscriptionChange {
     | "add_capacity"
     | "cancel"
     | "reactivate"
+    | "payment_simulated"
+    | "payment_failed"
+    | "activated"
+    | "expired"
     | "created";
   description: string;
   timing: "immediate" | "next_cycle";

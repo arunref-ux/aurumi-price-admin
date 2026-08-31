@@ -17,9 +17,11 @@ import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as EntitlementsRouteImport } from './routes/entitlements'
 import { Route as MarketsRouteImport } from './routes/markets'
 import { Route as PlansRouteImport } from './routes/plans'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PromotionsRouteImport } from './routes/promotions'
 import { Route as RulesRouteImport } from './routes/rules'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TenantsRouteImport } from './routes/tenants'
 import { Route as SubscriptionsNewRouteImport } from './routes/subscriptions.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -62,6 +64,11 @@ const PlansRoute = PlansRouteImport.update({
   path: '/plans',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PromotionsRoute = PromotionsRouteImport.update({
   id: '/promotions',
   path: '/promotions',
@@ -75,6 +82,11 @@ const RulesRoute = RulesRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantsRoute = TenantsRouteImport.update({
+  id: '/tenants',
+  path: '/tenants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SubscriptionsNewRoute = SubscriptionsNewRouteImport.update({
@@ -92,9 +104,11 @@ export interface FileRoutesByFullPath {
   '/entitlements': typeof EntitlementsRoute
   '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
+  '/pricing': typeof PricingRoute
   '/promotions': typeof PromotionsRoute
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
+  '/tenants': typeof TenantsRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesByTo {
@@ -106,9 +120,11 @@ export interface FileRoutesByTo {
   '/entitlements': typeof EntitlementsRoute
   '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
+  '/pricing': typeof PricingRoute
   '/promotions': typeof PromotionsRoute
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
+  '/tenants': typeof TenantsRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesById {
@@ -121,9 +137,11 @@ export interface FileRoutesById {
   '/entitlements': typeof EntitlementsRoute
   '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
+  '/pricing': typeof PricingRoute
   '/promotions': typeof PromotionsRoute
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
+  '/tenants': typeof TenantsRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRouteTypes {
@@ -137,9 +155,11 @@ export interface FileRouteTypes {
     | '/entitlements'
     | '/markets'
     | '/plans'
+    | '/pricing'
     | '/promotions'
     | '/rules'
     | '/settings'
+    | '/tenants'
     | '/subscriptions/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -151,9 +171,11 @@ export interface FileRouteTypes {
     | '/entitlements'
     | '/markets'
     | '/plans'
+    | '/pricing'
     | '/promotions'
     | '/rules'
     | '/settings'
+    | '/tenants'
     | '/subscriptions/new'
   id:
     | '__root__'
@@ -165,9 +187,11 @@ export interface FileRouteTypes {
     | '/entitlements'
     | '/markets'
     | '/plans'
+    | '/pricing'
     | '/promotions'
     | '/rules'
     | '/settings'
+    | '/tenants'
     | '/subscriptions/new'
   fileRoutesById: FileRoutesById
 }
@@ -180,9 +204,11 @@ export interface RootRouteChildren {
   EntitlementsRoute: typeof EntitlementsRoute
   MarketsRoute: typeof MarketsRoute
   PlansRoute: typeof PlansRoute
+  PricingRoute: typeof PricingRoute
   PromotionsRoute: typeof PromotionsRoute
   RulesRoute: typeof RulesRoute
   SettingsRoute: typeof SettingsRoute
+  TenantsRoute: typeof TenantsRoute
   SubscriptionsNewRoute: typeof SubscriptionsNewRoute
 }
 
@@ -244,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/promotions': {
       id: '/promotions'
       path: '/promotions'
@@ -265,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tenants': {
+      id: '/tenants'
+      path: '/tenants'
+      fullPath: '/tenants'
+      preLoaderRoute: typeof TenantsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subscriptions/new': {
       id: '/subscriptions/new'
       path: '/subscriptions/new'
@@ -284,9 +324,11 @@ const rootRouteChildren: RootRouteChildren = {
   EntitlementsRoute: EntitlementsRoute,
   MarketsRoute: MarketsRoute,
   PlansRoute: PlansRoute,
+  PricingRoute: PricingRoute,
   PromotionsRoute: PromotionsRoute,
   RulesRoute: RulesRoute,
   SettingsRoute: SettingsRoute,
+  TenantsRoute: TenantsRoute,
   SubscriptionsNewRoute: SubscriptionsNewRoute,
 }
 export const routeTree = rootRouteImport

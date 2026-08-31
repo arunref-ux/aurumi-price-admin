@@ -8,9 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import { seedState } from "./seed";
+import { validateCatalogue, type Issue } from "./validation";
 import type { Catalogue, CommerceState, TenantSubscription } from "./types";
 
-const STORAGE_KEY = "aurumi.commerce.v1";
+const STORAGE_KEY = "aurumi.commerce.v2";
 
 interface CommerceContextValue {
   state: CommerceState;
@@ -23,6 +24,10 @@ interface CommerceContextValue {
   discardDraft: () => void;
   hasUnpublishedChanges: boolean;
   saveSubscription: (sub: TenantSubscription) => void;
+  updateSubscription: (id: string, fn: (sub: TenantSubscription) => TenantSubscription) => void;
+  /** Catalogue consistency problems in the draft. Errors block publishing. */
+  catalogueIssues: Issue[];
+  canPublish: boolean;
   reset: () => void;
 }
 
@@ -65,14 +70,15 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
   const publish = useCallback(() => {
     setState((s) => ({
       ...s,
-      published: JSON.parse(JSON.stringify(s.draft)) as Catalogue,
+      draft: { ...s.draft, version: s.draft.version + 1 },
+      published: { ...(JSON.parse(JSON.stringify(s.draft)) as Catalogue), version: s.draft.version + 1 },
       lastPublishedAt: new Date().toISOString(),
       changeLog: [
         {
           id: crypto.randomUUID(),
           at: new Date().toISOString(),
           entity: "Configuration",
-          summary: "Draft published to public catalogue",
+          summary: `Draft published as catalogue version ${s.draft.version + 1}`,
         },
         ...s.changeLog,
       ].slice(0, 50),
@@ -90,7 +96,19 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const updateSubscription = useCallback(
+    (id: string, fn: (sub: TenantSubscription) => TenantSubscription) => {
+      setState((s) => ({
+        ...s,
+        subscriptions: s.subscriptions.map((x) => (x.id === id ? fn(x) : x)),
+      }));
+    },
+    [],
+  );
+
   const reset = useCallback(() => setState(seedState()), []);
+
+  const catalogueIssues = useMemo(() => validateCatalogue(state.draft), [state.draft]);
 
   const value = useMemo<CommerceContextValue>(
     () => ({
@@ -102,9 +120,12 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
       discardDraft,
       hasUnpublishedChanges: JSON.stringify(state.draft) !== JSON.stringify(state.published),
       saveSubscription,
+      updateSubscription,
+      catalogueIssues,
+      canPublish: !catalogueIssues.some((i) => i.severity === "error"),
       reset,
     }),
-    [state, updateDraft, publish, discardDraft, saveSubscription, reset],
+    [state, updateDraft, publish, discardDraft, saveSubscription, updateSubscription, catalogueIssues, reset],
   );
 
   return <CommerceContext.Provider value={value}>{children}</CommerceContext.Provider>;

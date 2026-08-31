@@ -31,7 +31,8 @@ export const Route = createFileRoute("/changes")({
 });
 
 function ChangesPage() {
-  const { draft, published, state, publish, discardDraft, hasUnpublishedChanges } = useCommerce();
+  const { draft, published, state, publish, discardDraft, hasUnpublishedChanges, catalogueIssues, canPublish } =
+    useCommerce();
 
   const priceDiffs = draft.prices
     .map((d) => {
@@ -74,17 +75,17 @@ function ChangesPage() {
     <AdminLayout>
       <PageHeader
         title="Review Changes"
-        description="Everything below is draft configuration. The public pricing page keeps serving the published catalogue until you publish."
+        description={`Draft v${draft.version} vs published v${published.version}. The subscription builder and pricing preview keep reading the published catalogue until you publish.`}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" disabled={!hasUnpublishedChanges} onClick={() => discardDraft()}>
               Discard draft
             </Button>
             <Button
-              disabled={!hasUnpublishedChanges}
+              disabled={!hasUnpublishedChanges || !canPublish}
               onClick={() => {
                 publish();
-                toast.success("Configuration published");
+                toast.success(`Configuration published as catalogue v${draft.version + 1}`);
               }}
             >
               Publish
@@ -92,6 +93,35 @@ function ChangesPage() {
           </div>
         }
       />
+
+      {catalogueIssues.length ? (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-base">Catalogue validation</CardTitle>
+            <CardDescription>
+              {canPublish
+                ? "No blocking problems — review the notes below."
+                : "Resolve every blocking problem before this draft can be published."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {catalogueIssues.map((i) => (
+              <div
+                key={i.id}
+                className={`rounded-md border px-3 py-2 ${i.severity === "error" ? "border-destructive/50 bg-destructive/5" : ""}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Badge variant={i.severity === "error" ? "destructive" : "outline"}>
+                    {i.severity === "error" ? "Blocking" : "Note"}
+                  </Badge>
+                  <span className="font-medium">{i.message}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{i.reason}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {!hasUnpublishedChanges ? (
         <Card>
