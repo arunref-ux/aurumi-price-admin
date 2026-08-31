@@ -261,6 +261,7 @@ export type SubscriptionStatus =
  */
 export type SimulatedPaymentStatus =
   | "not_required"
+  | "quote_pending"
   | "awaiting_simulated_payment"
   | "simulated_paid"
   | "simulated_failed";
@@ -317,7 +318,8 @@ export interface SubscriptionChange {
     | "payment_failed"
     | "activated"
     | "expired"
-    | "created";
+    | "created"
+    | "quote_requested";
   description: string;
   timing: "immediate" | "next_cycle";
   prorated: boolean;
