@@ -461,7 +461,7 @@ function BuilderPage() {
                               recurring
                             </div>
                           ) : null}
-                          {c.hasOneTimePrice ? (
+                          {c.hasOneTimePrice && !connQuote ? (
                             <div className="text-muted-foreground">
                               {formatMoney(setup?.monthly ?? null, marketRow.currency)} one-time
                             </div>
