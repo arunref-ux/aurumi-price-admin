@@ -12,6 +12,36 @@ import { validateCatalogue, type Issue } from "./validation";
 import type { Catalogue, CommerceState, TenantSubscription } from "./types";
 
 const STORAGE_KEY = "aurumi.commerce.v2";
+const LEGACY_STORAGE_KEY = "aurumi.commerce.v1";
+
+export type MigrationState =
+  | { kind: "none" }
+  | { kind: "offered" }
+  | { kind: "migrated" }
+  | { kind: "dismissed" };
+
+/**
+ * Prototype-only migration: v1 state predates catalogue versioning, derived
+ * entitlements and the extended add-on fields. We keep whatever is structurally
+ * compatible (tenants, subscriptions, change log) and rebuild the catalogue
+ * from the current seed so the data model stays coherent.
+ */
+function migrateV1(raw: string, base: CommerceState): CommerceState | null {
+  try {
+    const old = JSON.parse(raw) as Partial<CommerceState>;
+    if (!old || typeof old !== "object") return null;
+    return {
+      ...base,
+      tenants: Array.isArray(old.tenants) && old.tenants.length ? old.tenants : base.tenants,
+      subscriptions: Array.isArray(old.subscriptions) ? old.subscriptions : [],
+      changeLog: Array.isArray(old.changeLog) ? old.changeLog : [],
+      lastPublishedAt: old.lastPublishedAt ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 
 interface CommerceContextValue {
   state: CommerceState;
