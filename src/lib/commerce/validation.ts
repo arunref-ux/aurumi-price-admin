@@ -33,6 +33,9 @@ export function quoteReasons(catalogue: Catalogue, sel: Selection): string[] {
     if (!c) continue;
     if (c.quoteOnly) reasons.push(`${c.name} is a quote-only connector`);
     else if (findPrice(catalogue, id, sel.market)?.quoteOnly) reasons.push(`${c.name} has a quote-only price`);
+    else if (c.customCommercialTreatment && !hasCalculableAmount(catalogue, c, sel)) {
+      reasons.push(`${c.name} has a custom commercial treatment — quote required`);
+    }
   }
   return reasons;
 }
