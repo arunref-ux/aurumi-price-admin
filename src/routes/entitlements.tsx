@@ -11,8 +11,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCommerce } from "@/lib/commerce/store";
-import { ENTITLEMENT_LABELS } from "@/lib/commerce/entitlements";
-import { ADDON_UNIT_SIZE } from "@/lib/commerce/seed";
+import { ENTITLEMENT_LABELS, planEntitlements } from "@/lib/commerce/entitlements";
+
 
 export const Route = createFileRoute("/entitlements")({
   head: () => ({
@@ -79,7 +79,7 @@ USER / APP / ROLE ACCESS   (handled by Tenant Administration)`}
                 <TableRow key={key}>
                   <TableCell className="font-medium">{ENTITLEMENT_LABELS[key]}</TableCell>
                   {draft.plans.map((p) => {
-                    const e = p.entitlements.find((x) => x.key === key);
+                    const e = planEntitlements(p).find((x) => x.key === key);
                     return (
                       <TableCell key={p.id} className="tabular text-sm">
                         {!e ? (
@@ -109,7 +109,7 @@ USER / APP / ROLE ACCESS   (handled by Tenant Administration)`}
               <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                 <span>{a.name}</span>
                 <span className="tabular text-muted-foreground">
-                  +{(ADDON_UNIT_SIZE[a.id] ?? 1).toLocaleString()} {a.entitlement.unit} per unit
+                  +{a.unitSize.toLocaleString()} {a.entitlement.unit} per unit (increments of {a.quantityStep})
                 </span>
               </div>
             ))}

@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCommerce } from "@/lib/commerce/store";
 import { formatMoney } from "@/lib/commerce/pricing";
 import type { MarketId, Plan, SupportLevel } from "@/lib/commerce/types";
-import { ENTITLEMENT_LABELS } from "@/lib/commerce/entitlements";
+import { ENTITLEMENT_LABELS, planEntitlements } from "@/lib/commerce/entitlements";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/plans")({
@@ -308,10 +308,13 @@ function PlansPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Included entitlements</CardTitle>
-              <CardDescription>Price says what they pay; entitlement says what they may use.</CardDescription>
+              <CardDescription>
+                Derived from the plan capacities above — the plan is the single source of truth. Price says what
+                they pay; entitlement says what the tenant may use.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-1.5 text-sm">
-              {plan.entitlements.map((e, i) => (
+              {planEntitlements(plan).map((e, i) => (
                 <div key={`${e.key}-${i}`} className="flex justify-between rounded-md border px-3 py-1.5">
                   <span>{ENTITLEMENT_LABELS[e.key] ?? e.key}</span>
                   <span className="tabular text-muted-foreground">

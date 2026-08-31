@@ -156,33 +156,11 @@ const PLAN_DEFS: Array<Omit<Plan, "entitlements"> & { usd: number | null }> = [
 
 export const PLANS: Plan[] = PLAN_DEFS.map((p) => {
   const { usd: _usd, ...plan } = p;
-  return {
-    ...plan,
-    entitlements: plan.custom
-      ? [
-          { key: "apps.standard.all", label: "All Standard Aurumi Apps", source: plan.id },
-          { key: "support.level", label: plan.supportLevel, source: plan.id },
-          { key: "governance.advanced", label: "Advanced administration & governance", source: plan.id },
-          { key: "sla", label: "Custom SLA", source: plan.id },
-        ]
-      : [
-          { key: "users.included", value: plan.includedUsers ?? 0, unit: "users", source: plan.id },
-          { key: "apps.standard.all", label: "All Standard Aurumi Apps", source: plan.id },
-          {
-            key: "connectors.standard.quantity",
-            value: plan.includedStandardConnectors ?? 0,
-            unit: "connectors",
-            source: plan.id,
-          },
-          { key: "capacity.intelligence", value: plan.includedIntelligence ?? 0, unit: "AIC/mo", source: plan.id },
-          { key: "capacity.storage", value: plan.includedStorageGb ?? 0, unit: "GB", source: plan.id },
-          { key: "capacity.transfer", value: plan.includedTransferGb ?? 0, unit: "GB/mo", source: plan.id },
-          { key: "support.level", label: plan.supportLevel, source: plan.id },
-        ],
-  };
+  return plan;
 });
 
 const ALL_PLAN_IDS = PLANS.map((p) => p.id);
+const ALL_MARKET_IDS = MARKETS.map((m) => m.id);
 
 type AppSeed = [string, string, AurumiApp["category"], AurumiApp["classification"], string, number?];
 
@@ -286,10 +264,14 @@ export const ADDONS: AddOn[] = [
     name: "Extra Team Members",
     description: "Additional named users beyond the plan allowance.",
     unit: "user",
-    unitLabel: "per user / month",
+    unitLabel: "per user / month, sold in 10-user increments",
+    unitSize: 1,
+    quantityStep: 10,
+    recurring: true,
     minQuantity: 1,
     maxQuantity: 500,
     eligiblePlans: ALL_PLAN_IDS,
+    eligibleMarkets: ALL_MARKET_IDS,
     active: true,
     entitlement: { key: "users.included", unit: "users", source: "addon.users" },
   },
@@ -299,9 +281,13 @@ export const ADDONS: AddOn[] = [
     description: "Additional workspace storage capacity.",
     unit: "GB",
     unitLabel: "per 100 GB / month",
+    unitSize: 100,
+    quantityStep: 1,
+    recurring: true,
     minQuantity: 1,
     maxQuantity: 200,
     eligiblePlans: ALL_PLAN_IDS,
+    eligibleMarkets: ALL_MARKET_IDS,
     active: true,
     entitlement: { key: "capacity.storage", unit: "GB", source: "addon.storage" },
   },
@@ -311,9 +297,13 @@ export const ADDONS: AddOn[] = [
     description: "Additional Aurumi Intelligence Credits (AIC) per month.",
     unit: "AIC",
     unitLabel: "per 5,000 AIC / month",
+    unitSize: 5000,
+    quantityStep: 1,
+    recurring: true,
     minQuantity: 1,
     maxQuantity: 100,
     eligiblePlans: ALL_PLAN_IDS,
+    eligibleMarkets: ALL_MARKET_IDS,
     active: true,
     entitlement: { key: "capacity.intelligence", unit: "AIC/mo", source: "addon.intelligence" },
   },
@@ -323,21 +313,25 @@ export const ADDONS: AddOn[] = [
     description: "Additional monthly data-transfer capacity.",
     unit: "GB",
     unitLabel: "per 500 GB / month",
+    unitSize: 500,
+    quantityStep: 1,
+    recurring: true,
     minQuantity: 1,
     maxQuantity: 100,
     eligiblePlans: ALL_PLAN_IDS,
+    eligibleMarkets: ALL_MARKET_IDS,
     active: true,
     entitlement: { key: "capacity.transfer", unit: "GB/mo", source: "addon.transfer" },
   },
 ];
 
-/** Units delivered per purchased unit of an add-on. */
-export const ADDON_UNIT_SIZE: Record<string, number> = {
-  "addon.users": 1,
-  "addon.storage": 100,
-  "addon.intelligence": 5000,
-  "addon.transfer": 500,
-};
+/**
+ * Derived from the catalogue — the add-on record is the single source of truth
+ * for how much capacity one purchased unit delivers.
+ */
+export const ADDON_UNIT_SIZE: Record<string, number> = Object.fromEntries(
+  ADDONS.map((a) => [a.id, a.unitSize]),
+);
 
 const ADDON_USD: Record<string, number> = {
   "addon.users": 6,
@@ -422,6 +416,7 @@ export const TENANTS: Tenant[] = [
 
 export function seedCatalogue(): Catalogue {
   return {
+    version: 1,
     plans: PLANS,
     apps: APPS,
     connectors: CONNECTORS,

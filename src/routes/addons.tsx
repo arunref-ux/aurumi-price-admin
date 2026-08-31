@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCommerce } from "@/lib/commerce/store";
 import { formatMoney } from "@/lib/commerce/pricing";
-import { ADDON_UNIT_SIZE } from "@/lib/commerce/seed";
+
 import { ENTITLEMENT_LABELS } from "@/lib/commerce/entitlements";
 import type { AddOn, MarketId } from "@/lib/commerce/types";
 
@@ -74,7 +74,7 @@ function AddOnsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         {draft.addOns.map((a) => {
           const rule = draft.prices.find((r) => r.productId === a.id && r.market === market);
-          const size = ADDON_UNIT_SIZE[a.id] ?? 1;
+          const size = a.unitSize;
           return (
             <Card key={a.id}>
               <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
@@ -94,6 +94,8 @@ function AddOnsPage() {
                   <Badge variant="outline">
                     1 unit = {size.toLocaleString()} {a.unit}
                   </Badge>
+                  <Badge variant="outline">Sold in increments of {a.quantityStep}</Badge>
+                  <Badge variant="outline">{a.recurring ? "Recurring" : "One-time"}</Badge>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

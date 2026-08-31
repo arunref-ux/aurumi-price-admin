@@ -11,170 +11,95 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCommerce } from "@/lib/commerce/store";
-import { activePromotions, computeTotals, findPrice, formatMoney } from "@/lib/commerce/pricing";
-import { ADDON_UNIT_SIZE } from "@/lib/commerce/seed";
+import { activePromotions, findPrice, formatMoney } from "@/lib/commerce/pricing";
+import { addOnCapacities, buildQuote, CHARGE_CLASS_LABEL } from "@/lib/commerce/cart";
+import { validateSelection, type Selection } from "@/lib/commerce/validation";
 import { deriveEntitlements, ENTITLEMENT_LABELS, summariseEntitlements } from "@/lib/commerce/entitlements";
-import type { BillingCycle, CartLine, MarketId, TenantSubscription } from "@/lib/commerce/types";
+import type { BillingCycle, MarketId, TenantSubscription } from "@/lib/commerce/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/subscriptions/new")({
   head: () => ({
     meta: [
-      { title: "Subscription Builder | Aurumi Admin" },
+      { title: "Subscription Builder | Aurumi Price Admin" },
       {
         name: "description",
         content:
-          "Build a tenant subscription: select tenant and plan, review entitlements, add premium apps, connectors and capacity, then confirm the order.",
+          "Configure a tenant purchase from the published Aurumi catalogue: plan, premium apps, connectors, capacity add-ons, promotions and simulated checkout.",
       },
-      { property: "og:title", content: "Subscription Builder | Aurumi Admin" },
+      { property: "og:title", content: "Subscription Builder | Aurumi Price Admin" },
       { property: "og:description", content: "Configure what a specific Aurumi tenant has purchased." },
     ],
   }),
   component: BuilderPage,
 });
 
-const STEPS = [
-  "Tenant",
-  "Plan",
-  "Entitlements",
-  "Premium Apps",
-  "Connectors",
-  "Capacity",
-  "Review order",
-] as const;
+const STEPS = ["Tenant", "Plan", "Entitlements", "Premium Apps", "Connectors", "Capacity", "Review"] as const;
 
 function BuilderPage() {
-  const { published, draft, state, saveSubscription } = useCommerce();
+  const { published, state, saveSubscription } = useCommerce();
   const catalogue = published;
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
   const [tenantId, setTenantId] = useState(state.tenants[0]?.id ?? "");
   const tenant = state.tenants.find((t) => t.id === tenantId);
-  const [market, setMarket] = useState<MarketId>(tenant?.primaryMarket ?? draft.settings.defaultMarket);
+  const [market, setMarket] = useState<MarketId>(tenant?.primaryMarket ?? catalogue.settings.defaultMarket);
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
-  const [planId, setPlanId] = useState(catalogue.plans[1]?.id ?? "");
+  const [planId, setPlanId] = useState(catalogue.plans[1]?.id ?? catalogue.plans[0]?.id ?? "");
   const [premiumAppIds, setPremiumAppIds] = useState<string[]>([]);
   const [connectorIds, setConnectorIds] = useState<string[]>([]);
   const [addonQty, setAddonQty] = useState<Record<string, number>>({});
   const [promoCode, setPromoCode] = useState("");
 
   const plan = catalogue.plans.find((p) => p.id === planId);
-  const marketRow = catalogue.markets.find((m) => m.id === market)!;
+  const marketRow = catalogue.markets.find((m) => m.id === market) ?? catalogue.markets[0]!;
 
+  const selection: Selection = { planId, market, cycle, premiumAppIds, connectorIds, addonQty };
+  const issues = useMemo(() => validateSelection(catalogue, selection), [catalogue, JSON.stringify(selection)]);
+  const errors = issues.filter((i) => i.severity === "error");
+  const warnings = issues.filter((i) => i.severity === "warning");
+
+  const promos = plan ? activePromotions(catalogue, plan.id, market, cycle, promoCode || null) : [];
+  const { lines, totals } = useMemo(
+    () => buildQuote(catalogue, selection, promoCode ? promos : []),
+    [catalogue, JSON.stringify(selection), promoCode, promos.length],
+  );
+
+  const capacities = addOnCapacities(catalogue, addonQty);
   const standardConnectorIds = connectorIds.filter(
     (id) => catalogue.connectors.find((c) => c.id === id)?.classification === "Standard",
   );
   const additionalConnectorIds = connectorIds.filter((id) => !standardConnectorIds.includes(id));
 
-  const lines: CartLine[] = useMemo(() => {
-    const out: CartLine[] = [];
-    if (plan) {
-      const rule = findPrice(catalogue, plan.id, market);
-      out.push({
-        id: `plan-${plan.id}`,
-        productId: plan.id,
-        kind: "plan",
-        label: `${plan.name} plan (${cycle})`,
-        quantity: 1,
-        unitAmount: (cycle === "monthly" ? rule?.monthly : rule?.annual) ?? 0,
-        recurring: true,
-        quoteOnly: rule?.quoteOnly || plan.custom,
-      });
-    }
-    for (const id of premiumAppIds) {
-      const app = catalogue.apps.find((a) => a.id === id)!;
-      const rule = findPrice(catalogue, id, market);
-      out.push({
-        id: `app-${id}`,
-        productId: id,
-        kind: "premium_app",
-        label: `Premium App · ${app.name}`,
-        quantity: 1,
-        unitAmount: (cycle === "monthly" ? rule?.monthly : rule?.annual) ?? 0,
-        recurring: true,
-      });
-    }
-    for (const id of connectorIds) {
-      const c = catalogue.connectors.find((x) => x.id === id)!;
-      if (c.hasRecurringPrice) {
-        const rule = findPrice(catalogue, id, market);
-        out.push({
-          id: `conn-${id}`,
-          productId: id,
-          kind: "connector",
-          label: `${c.classification} Connector · ${c.name}`,
-          quantity: 1,
-          unitAmount: (cycle === "monthly" ? rule?.monthly : rule?.annual) ?? 0,
-          recurring: true,
-          quoteOnly: c.quoteOnly,
-        });
-      }
-      if (c.hasOneTimePrice) {
-        const rule = findPrice(catalogue, `${id}:setup`, market);
-        out.push({
-          id: `conn-setup-${id}`,
-          productId: `${id}:setup`,
-          kind: "connector_setup",
-          label: `Implementation · ${c.name}`,
-          quantity: 1,
-          unitAmount: rule?.monthly ?? 0,
-          recurring: false,
-          quoteOnly: c.quoteOnly,
-        });
-      }
-      if (c.quoteOnly && !c.hasRecurringPrice && !c.hasOneTimePrice) {
-        out.push({
-          id: `conn-quote-${id}`,
-          productId: id,
-          kind: "connector",
-          label: `${c.name} (custom quote)`,
-          quantity: 1,
-          unitAmount: 0,
-          recurring: true,
-          quoteOnly: true,
-        });
-      }
-    }
-    for (const [id, qty] of Object.entries(addonQty)) {
-      if (!qty) continue;
-      const addon = catalogue.addOns.find((a) => a.id === id)!;
-      const rule = findPrice(catalogue, id, market);
-      out.push({
-        id: `addon-${id}`,
-        productId: id,
-        kind: "addon",
-        label: `${addon.name} × ${qty}`,
-        quantity: qty,
-        unitAmount: (cycle === "monthly" ? rule?.monthly : rule?.annual) ?? 0,
-        recurring: true,
-      });
-    }
-    return out;
-  }, [catalogue, plan, market, cycle, premiumAppIds, connectorIds, addonQty]);
-
-  const promos = plan ? activePromotions(catalogue, plan.id, market, cycle, promoCode || null) : [];
-  const totals = computeTotals(catalogue, lines, market, cycle, promoCode ? promos : []);
-
-  const subShape = {
+  const entitlements = deriveEntitlements(catalogue, {
     planId,
-    additionalUsers: addonQty["addon.users"] ?? 0,
     premiumAppIds,
     standardConnectorIds,
     additionalConnectorIds,
-    additionalIntelligence: (addonQty["addon.intelligence"] ?? 0) * (ADDON_UNIT_SIZE["addon.intelligence"] ?? 1),
-    additionalStorageGb: (addonQty["addon.storage"] ?? 0) * (ADDON_UNIT_SIZE["addon.storage"] ?? 1),
-    additionalTransferGb: (addonQty["addon.transfer"] ?? 0) * (ADDON_UNIT_SIZE["addon.transfer"] ?? 1),
-  };
-  const entitlements = deriveEntitlements(catalogue, subShape);
+    ...capacities,
+  });
   const summary = summariseEntitlements(entitlements);
+  const includedStd = plan?.custom ? null : (plan?.includedStandardConnectors ?? 0);
 
   const confirm = () => {
-    if (!tenant || !plan) return;
+    if (!tenant || !plan || errors.length) return;
     const now = new Date();
     const renewal = new Date(now);
     if (cycle === "annual") renewal.setFullYear(renewal.getFullYear() + 1);
     else renewal.setMonth(renewal.getMonth() + 1);
+    const stamp = (
+      type: TenantSubscription["changeLog"][number]["type"],
+      description: string,
+    ) => ({
+      id: `chg.${Math.random().toString(36).slice(2, 8)}`,
+      type,
+      description,
+      timing: "immediate" as const,
+      prorated: false,
+      effectiveDate: now.toISOString(),
+      createdAt: now.toISOString(),
+    });
 
     const sub: TenantSubscription = {
       id: `sub.${Math.random().toString(36).slice(2, 9)}`,
@@ -183,40 +108,35 @@ function BuilderPage() {
       market,
       currency: marketRow.currency,
       billingCycle: cycle,
-      status: "active",
+      // Simulated lifecycle: DRAFT -> PENDING PAYMENT -> ACTIVE.
+      status: "pending_payment",
       includedUsers: plan.includedUsers,
-      additionalUsers: subShape.additionalUsers,
+      additionalUsers: capacities.additionalUsers,
       standardAppsEntitled: true,
       premiumAppIds,
       standardConnectorIds,
       additionalConnectorIds,
-      additionalIntelligence: subShape.additionalIntelligence,
-      additionalStorageGb: subShape.additionalStorageGb,
-      additionalTransferGb: subShape.additionalTransferGb,
+      additionalIntelligence: capacities.additionalIntelligence,
+      additionalStorageGb: capacities.additionalStorageGb,
+      additionalTransferGb: capacities.additionalTransferGb,
       lines,
       totals,
       promotionCode: promoCode || null,
+      catalogueVersion: catalogue.version,
       paymentProvider: marketRow.paymentProvider,
-      paymentStatus: "mock_paid",
+      paymentMode: "simulated",
+      paymentStatus: "awaiting_simulated_payment",
       startDate: now.toISOString(),
       renewalDate: renewal.toISOString(),
       cancellationRequested: false,
       cancellationEffective: null,
       entitlements,
       changeLog: [
-        {
-          id: `chg.${Math.random().toString(36).slice(2, 8)}`,
-          type: "created",
-          description: `Subscription created on ${plan.name}`,
-          timing: "immediate",
-          prorated: false,
-          effectiveDate: now.toISOString(),
-          createdAt: now.toISOString(),
-        },
+        stamp("created", `Subscription drafted on ${plan.name} from catalogue v${catalogue.version}`),
       ],
     };
     saveSubscription(sub);
-    toast.success("Subscription confirmed (checkout simulated — no payment was taken)");
+    toast.success("Subscription created — awaiting simulated payment");
     navigate({ to: "/tenants" });
   };
 
@@ -224,22 +144,52 @@ function BuilderPage() {
     <AdminLayout>
       <PageHeader
         title="Tenant Subscription Builder"
-        description="Commercial configuration answers “what does Aurumi sell?”. This answers “what has this tenant purchased?”. Every price below is read from the published catalogue."
+        description="Commercial configuration answers “what can Aurumi sell?”. This answers “what has this tenant purchased?”. Prices are read from the published catalogue only; user- and role-level access is handled in Tenant Administration."
       />
 
-      <div className="mb-4 flex flex-wrap gap-1.5">
+      <div className="mb-4 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {STEPS.map((s, i) => (
-          <Button key={s} size="sm" variant={i === step ? "default" : "outline"} onClick={() => setStep(i)}>
+          <Button
+            key={s}
+            size="sm"
+            className="shrink-0"
+            variant={i === step ? "default" : "outline"}
+            onClick={() => setStep(i)}
+          >
             {i + 1}. {s}
           </Button>
         ))}
       </div>
 
+      {issues.length ? (
+        <div className="mb-4 space-y-2">
+          {[...errors, ...warnings].map((i) => (
+            <div
+              key={i.id}
+              className={`rounded-md border px-3 py-2 text-sm ${
+                i.severity === "error" ? "border-destructive/50 bg-destructive/5" : "bg-secondary"
+              }`}
+              role={i.severity === "error" ? "alert" : undefined}
+            >
+              <div className="flex items-center gap-2">
+                <Badge variant={i.severity === "error" ? "destructive" : "outline"}>
+                  {i.severity === "error" ? "Blocking" : "Note"}
+                </Badge>
+                <span className="font-medium">{i.message}</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{i.reason}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{STEPS[step]}</CardTitle>
-            <CardDescription>Step {step + 1} of {STEPS.length}</CardDescription>
+            <CardDescription>
+              Step {step + 1} of {STEPS.length} · published catalogue v{catalogue.version}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {step === 0 ? (
@@ -273,24 +223,30 @@ function BuilderPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {catalogue.markets.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
+                      {catalogue.markets
+                        .filter((m) => m.active)
+                        .map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Currency</Label>
-                  <Input readOnly value={marketRow.currency} />
+                  <Input readOnly value={marketRow.currency} aria-label="Currency" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Billing cycle</Label>
                   <Tabs value={cycle} onValueChange={(v) => setCycle(v as BillingCycle)}>
                     <TabsList className="w-full">
-                      <TabsTrigger className="flex-1" value="monthly">Monthly</TabsTrigger>
-                      <TabsTrigger className="flex-1" value="annual">Annual</TabsTrigger>
+                      <TabsTrigger className="flex-1" value="monthly">
+                        Monthly
+                      </TabsTrigger>
+                      <TabsTrigger className="flex-1" value="annual">
+                        Annual
+                      </TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </div>
@@ -307,8 +263,10 @@ function BuilderPage() {
                     return (
                       <button
                         key={p.id}
+                        type="button"
+                        aria-pressed={selected}
                         onClick={() => setPlanId(p.id)}
-                        className={`rounded-lg border p-4 text-left transition-colors ${selected ? "border-accent bg-secondary" : "hover:bg-secondary/50"}`}
+                        className={`rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-accent bg-secondary" : "hover:bg-secondary/50"}`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-display font-semibold">{p.name}</span>
@@ -318,10 +276,12 @@ function BuilderPage() {
                         <div className="mt-3 tabular text-lg">
                           {p.custom || rule?.quoteOnly
                             ? "Custom quote"
-                            : `${formatMoney(cycle === "monthly" ? rule?.monthly ?? null : rule?.annual ?? null, marketRow.currency)} / ${cycle === "monthly" ? "mo" : "yr"}`}
+                            : `${formatMoney(cycle === "monthly" ? (rule?.monthly ?? null) : (rule?.annual ?? null), marketRow.currency)} / ${cycle === "monthly" ? "mo" : "yr"}`}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
-                          {p.custom ? "Custom capacity" : `${p.includedUsers} users included`}
+                          {p.custom
+                            ? "Custom capacity · all Standard Apps"
+                            : `${p.includedUsers} users · all Standard Apps · ${p.includedStandardConnectors} Standard Connectors`}
                         </div>
                       </button>
                     );
@@ -340,14 +300,17 @@ function BuilderPage() {
                   </div>
                 ))}
                 <p className="pt-2 text-xs text-muted-foreground">
-                  Tenant entitlements are not user access. The tenant administrator decides which users and roles
-                  can open which apps.
+                  These are tenant-level commercial entitlements, derived from the plan and add-ons. Which users or
+                  roles may use them is decided in Tenant Administration / RBAC, not here.
                 </p>
               </div>
             ) : null}
 
             {step === 3 ? (
               <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Every paid workspace includes all Standard Aurumi Apps. Premium Apps are purchased as add-ons.
+                </p>
                 {catalogue.apps
                   .filter((a) => a.classification === "Premium" && a.active)
                   .map((a) => {
@@ -357,12 +320,12 @@ function BuilderPage() {
                     return (
                       <label
                         key={a.id}
-                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${eligible ? "" : "opacity-50"}`}
+                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${eligible || on ? "" : "opacity-50"}`}
                       >
                         <span className="flex items-center gap-3">
                           <Checkbox
                             checked={on}
-                            disabled={!eligible}
+                            disabled={!eligible && !on}
                             onCheckedChange={(v) =>
                               setPremiumAppIds(v ? [...premiumAppIds, a.id] : premiumAppIds.filter((x) => x !== a.id))
                             }
@@ -374,8 +337,14 @@ function BuilderPage() {
                             </span>
                           </span>
                         </span>
-                        <span className="tabular text-sm">
-                          {formatMoney(cycle === "monthly" ? rule?.monthly ?? null : rule?.annual ?? null, marketRow.currency)}
+                        <span className="shrink-0 text-right text-sm">
+                          <Badge variant="outline">Add-on</Badge>
+                          <span className="mt-1 block tabular">
+                            {formatMoney(
+                              cycle === "monthly" ? (rule?.monthly ?? null) : (rule?.annual ?? null),
+                              marketRow.currency,
+                            )}
+                          </span>
                         </span>
                       </label>
                     );
@@ -386,10 +355,9 @@ function BuilderPage() {
             {step === 4 ? (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Standard Connectors count against the plan allowance
-                  {plan && !plan.custom ? ` (${standardConnectorIds.length}/${plan.includedStandardConnectors} used)` : ""}.
-                  Additional and Custom Connectors are charged separately and may require Aurumi-assisted
-                  implementation.
+                  Standard Connectors consume the plan allowance
+                  {includedStd !== null ? ` (${standardConnectorIds.length} of ${includedStd} used)` : " (custom)"}.
+                  Additional and Custom Connectors are charged separately and may carry one-time implementation work.
                 </p>
                 {catalogue.connectors
                   .filter((c) => c.active)
@@ -398,15 +366,24 @@ function BuilderPage() {
                     const setup = findPrice(catalogue, `${c.id}:setup`, market);
                     const on = connectorIds.includes(c.id);
                     const eligible = c.eligiblePlans.includes(planId);
+                    const isStandard = c.classification === "Standard";
+                    const idx = standardConnectorIds.indexOf(c.id);
+                    const withinAllowance =
+                      isStandard && (includedStd === null || (idx >= 0 ? idx < includedStd : standardConnectorIds.length < includedStd));
+                    const badge = c.quoteOnly
+                      ? "Custom / quote"
+                      : isStandard && withinAllowance && !c.hasRecurringPrice
+                        ? "Included"
+                        : "Additional charge";
                     return (
                       <label
                         key={c.id}
-                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${eligible ? "" : "opacity-50"}`}
+                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${eligible || on ? "" : "opacity-50"}`}
                       >
                         <span className="flex items-center gap-3">
                           <Checkbox
                             checked={on}
-                            disabled={!eligible}
+                            disabled={!eligible && !on}
                             onCheckedChange={(v) =>
                               setConnectorIds(v ? [...connectorIds, c.id] : connectorIds.filter((x) => x !== c.id))
                             }
@@ -415,27 +392,26 @@ function BuilderPage() {
                             <span className="text-sm font-medium">{c.name}</span>
                             <span className="block text-xs text-muted-foreground">
                               {c.classification} · {c.setupMode}
-                              {c.professionalServicesRequired ? " · Professional services required" : ""}
+                              {c.professionalServicesRequired ? " · Professional services" : ""}
                             </span>
                           </span>
                         </span>
-                        <span className="text-right text-xs tabular">
-                          {c.quoteOnly ? (
-                            "Custom quote"
-                          ) : (
-                            <>
-                              <div>
-                                {c.hasRecurringPrice
-                                  ? `${formatMoney(cycle === "monthly" ? rec?.monthly ?? null : rec?.annual ?? null, marketRow.currency)} recurring`
-                                  : "Included in plan"}
-                              </div>
-                              {c.hasOneTimePrice ? (
-                                <div className="text-muted-foreground">
-                                  {formatMoney(setup?.monthly ?? null, marketRow.currency)} one-time
-                                </div>
-                              ) : null}
-                            </>
-                          )}
+                        <span className="shrink-0 text-right text-xs tabular">
+                          <Badge variant={badge === "Included" ? "secondary" : "outline"}>{badge}</Badge>
+                          {c.hasRecurringPrice && !c.quoteOnly ? (
+                            <div className="mt-1">
+                              {formatMoney(
+                                cycle === "monthly" ? (rec?.monthly ?? null) : (rec?.annual ?? null),
+                                marketRow.currency,
+                              )}{" "}
+                              recurring
+                            </div>
+                          ) : null}
+                          {c.hasOneTimePrice ? (
+                            <div className="text-muted-foreground">
+                              {formatMoney(setup?.monthly ?? null, marketRow.currency)} one-time
+                            </div>
+                          ) : null}
                         </span>
                       </label>
                     );
@@ -446,28 +422,44 @@ function BuilderPage() {
             {step === 5 ? (
               <div className="space-y-3">
                 {catalogue.addOns
-                  .filter((a) => a.active && a.eligiblePlans.includes(planId))
+                  .filter((a) => a.active && a.eligiblePlans.includes(planId) && a.eligibleMarkets.includes(market))
                   .map((a) => {
                     const rule = findPrice(catalogue, a.id, market);
                     const qty = addonQty[a.id] ?? 0;
+                    const invalid = qty > 0 && qty % a.quantityStep !== 0;
                     return (
-                      <div key={a.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-                        <div>
-                          <div className="text-sm font-medium">{a.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {a.unitLabel} ·{" "}
-                            {formatMoney(cycle === "monthly" ? rule?.monthly ?? null : rule?.annual ?? null, marketRow.currency)}{" "}
-                            per unit
+                      <div key={a.id} className="rounded-md border px-3 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-medium">{a.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {a.unitLabel} ·{" "}
+                              {formatMoney(
+                                cycle === "monthly" ? (rule?.monthly ?? null) : (rule?.annual ?? null),
+                                marketRow.currency,
+                              )}{" "}
+                              per unit · 1 unit = {a.unitSize.toLocaleString()} {a.unit}
+                            </div>
                           </div>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={a.quantityStep}
+                            max={a.maxQuantity ?? undefined}
+                            aria-label={`${a.name} quantity`}
+                            aria-invalid={invalid}
+                            className="w-24 tabular"
+                            value={qty}
+                            onChange={(e) =>
+                              setAddonQty({ ...addonQty, [a.id]: Math.max(0, Number(e.target.value)) })
+                            }
+                          />
                         </div>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={a.maxQuantity ?? undefined}
-                          className="w-24 tabular"
-                          value={qty}
-                          onChange={(e) => setAddonQty({ ...addonQty, [a.id]: Math.max(0, Number(e.target.value)) })}
-                        />
+                        {invalid ? (
+                          <p className="mt-1 text-xs text-destructive">
+                            Sold in increments of {a.quantityStep}.
+                          </p>
+                        ) : null}
                       </div>
                     );
                   })}
@@ -477,8 +469,11 @@ function BuilderPage() {
             {step === 6 ? (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Promotion code</Label>
+                  <Label className="text-xs text-muted-foreground" htmlFor="promo">
+                    Promotion code
+                  </Label>
                   <Input
+                    id="promo"
                     placeholder="e.g. AURUMI20"
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
@@ -490,13 +485,22 @@ function BuilderPage() {
                 <Separator />
                 <div className="space-y-1.5 text-sm">
                   {lines.map((l) => (
-                    <div key={l.id} className="flex justify-between">
-                      <span>
-                        {l.label}
-                        {l.recurring ? "" : " (one-time)"}
+                    <div key={l.id} className="flex items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Badge variant={l.chargeClass === "included" ? "secondary" : "outline"} className="shrink-0">
+                          {CHARGE_CLASS_LABEL[l.chargeClass]}
+                        </Badge>
+                        <span className="truncate">
+                          {l.label}
+                          {l.recurring ? "" : " · one-time"}
+                        </span>
                       </span>
-                      <span className="tabular">
-                        {l.quoteOnly ? "Quoted" : formatMoney(l.unitAmount * l.quantity, totals.currency)}
+                      <span className="tabular shrink-0">
+                        {l.quoteOnly
+                          ? "Quoted"
+                          : l.chargeClass === "included"
+                            ? "Included"
+                            : formatMoney(l.unitAmount * l.quantity, totals.currency)}
                       </span>
                     </div>
                   ))}
@@ -504,11 +508,12 @@ function BuilderPage() {
                 <Separator />
                 <p className="text-xs text-muted-foreground">
                   Payment provider for {marketRow.name}: <strong>{marketRow.paymentProvider}</strong>. Checkout is
-                  simulated in this version — confirming records the subscription and its entitlements without
-                  creating a real payment.
+                  <strong> simulated</strong> in this prototype — confirming records the subscription as
+                  <strong> pending payment</strong>. A real payment provider will determine the verified payment state
+                  in a later phase. No card details are collected.
                 </p>
-                <Button className="w-full" onClick={confirm} disabled={!tenant || !plan}>
-                  Confirm subscription (simulated checkout)
+                <Button className="w-full" onClick={confirm} disabled={!tenant || !plan || errors.length > 0}>
+                  {errors.length ? `Resolve ${errors.length} blocking issue(s)` : "Create subscription (simulated)"}
                 </Button>
               </div>
             ) : null}
@@ -525,7 +530,7 @@ function BuilderPage() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="sticky top-20">
+          <Card className="lg:sticky lg:top-20">
             <CardHeader>
               <CardTitle className="text-base">Order summary</CardTitle>
               <CardDescription>
@@ -535,9 +540,9 @@ function BuilderPage() {
             <CardContent className="space-y-2 text-sm">
               <Row label="Recurring subtotal" value={formatMoney(totals.recurringSubtotal, totals.currency)} />
               <Row label="One-time subtotal" value={formatMoney(totals.oneTimeSubtotal, totals.currency)} />
-              <Row label="Discount" value={`− ${formatMoney(totals.discount, totals.currency)}`} />
+              <Row label="Promotions" value={`− ${formatMoney(totals.discount, totals.currency)}`} />
               <Row
-                label={`${totals.taxName} (${totals.taxRatePct}%)`}
+                label={`${totals.taxName} (${totals.taxRatePct}%) — simulated`}
                 value={formatMoney(totals.tax, totals.currency)}
               />
               <Separator />
@@ -556,7 +561,7 @@ function BuilderPage() {
               <Row label="Total payable now" value={formatMoney(totals.total, totals.currency)} strong />
               {lines.some((l) => l.quoteOnly) ? (
                 <p className="text-xs text-muted-foreground">
-                  Some selected items are quoted separately and are excluded from the calculated totals.
+                  Quote-only items are excluded from calculated totals.
                 </p>
               ) : null}
             </CardContent>
@@ -565,12 +570,13 @@ function BuilderPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Resulting tenant entitlements</CardTitle>
+              <CardDescription>Derived from plan + add-ons.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1.5 text-sm">
               {summary.map((e) => (
-                <div key={e.key} className="flex justify-between">
+                <div key={e.key} className="flex justify-between gap-3">
                   <span>{ENTITLEMENT_LABELS[e.key] ?? e.key}</span>
-                  <span className="tabular text-muted-foreground">
+                  <span className="tabular text-right text-muted-foreground">
                     {e.total > 0 ? `${e.total.toLocaleString()} ${e.unit ?? ""}` : e.labels.join(", ")}
                   </span>
                 </div>
@@ -585,7 +591,7 @@ function BuilderPage() {
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={`flex justify-between ${strong ? "font-semibold" : ""}`}>
+    <div className={`flex justify-between gap-3 ${strong ? "font-semibold" : ""}`}>
       <span>{label}</span>
       <span className="tabular">{value}</span>
     </div>

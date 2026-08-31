@@ -16,6 +16,8 @@ import {
   Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCommerce } from "@/lib/commerce/store";
 import { toast } from "sonner";
@@ -42,7 +44,8 @@ const TENANT_NAV = [
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { hasUnpublishedChanges, publish, discardDraft, state } = useCommerce();
+  const { hasUnpublishedChanges, publish, discardDraft, state, canPublish, catalogueIssues } = useCommerce();
+  const blocking = catalogueIssues.filter((i) => i.severity === "error").length;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -60,20 +63,41 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <NavGroup title="Tenant subscription" items={TENANT_NAV} pathname={pathname} />
         </nav>
         <div className="border-t border-sidebar-border px-4 py-4 text-xs text-sidebar-foreground/70">
-          {state.lastPublishedAt
-            ? `Published ${new Date(state.lastPublishedAt).toLocaleString()}`
-            : "Never published"}
+          <div>Published catalogue v{state.published.version}</div>
+          <div>
+            {state.lastPublishedAt
+              ? `Published ${new Date(state.lastPublishedAt).toLocaleString()}`
+              : "Never published"}
+          </div>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b bg-card/90 px-6 py-3 backdrop-blur">
           <div className="flex items-center gap-3">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="lg:hidden" aria-label="Open navigation">
+                  <Menu className="size-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
+                <SheetTitle className="border-b border-sidebar-border px-5 py-4 font-display text-sm tracking-[0.2em] text-sidebar-primary">
+                  AURUMI PRICE ADMIN
+                </SheetTitle>
+                <nav className="space-y-6 overflow-y-auto px-3 py-5">
+                  <NavGroup title="Commercial configuration" items={CONFIG_NAV} pathname={pathname} />
+                  <NavGroup title="Tenant subscription" items={TENANT_NAV} pathname={pathname} />
+                </nav>
+              </SheetContent>
+            </Sheet>
             <Badge variant={hasUnpublishedChanges ? "default" : "secondary"}>
               {hasUnpublishedChanges ? "Draft — unpublished changes" : "Published"}
             </Badge>
-            <span className="text-xs text-muted-foreground">
-              Catalogue changes stay in draft until published.
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              {blocking
+                ? `${blocking} catalogue issue(s) block publishing.`
+                : "Catalogue changes stay in draft until published."}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -93,7 +117,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
             <Button
               size="sm"
-              disabled={!hasUnpublishedChanges}
+              disabled={!hasUnpublishedChanges || !canPublish}
+              title={canPublish ? undefined : "Resolve catalogue issues before publishing"}
               onClick={() => {
                 publish();
                 toast.success("Configuration published");
