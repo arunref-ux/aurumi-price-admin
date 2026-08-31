@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AddonsRouteImport } from './routes/addons'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as PlansRouteImport } from './routes/plans'
@@ -17,6 +18,11 @@ import { Route as PlansRouteImport } from './routes/plans'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AddonsRoute = AddonsRouteImport.update({
+  id: '/addons',
+  path: '/addons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppsRoute = AppsRouteImport.update({
@@ -37,12 +43,14 @@ const PlansRoute = PlansRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
   '/connectors': typeof ConnectorsRoute
   '/plans': typeof PlansRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
   '/connectors': typeof ConnectorsRoute
   '/plans': typeof PlansRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
   '/connectors': typeof ConnectorsRoute
   '/plans': typeof PlansRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apps' | '/connectors' | '/plans'
+  fullPaths: '/' | '/addons' | '/apps' | '/connectors' | '/plans'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apps' | '/connectors' | '/plans'
-  id: '__root__' | '/' | '/apps' | '/connectors' | '/plans'
+  to: '/' | '/addons' | '/apps' | '/connectors' | '/plans'
+  id: '__root__' | '/' | '/addons' | '/apps' | '/connectors' | '/plans'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AddonsRoute: typeof AddonsRoute
   AppsRoute: typeof AppsRoute
   ConnectorsRoute: typeof ConnectorsRoute
   PlansRoute: typeof PlansRoute
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/addons': {
+      id: '/addons'
+      path: '/addons'
+      fullPath: '/addons'
+      preLoaderRoute: typeof AddonsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/apps': {
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AddonsRoute: AddonsRoute,
   AppsRoute: AppsRoute,
   ConnectorsRoute: ConnectorsRoute,
   PlansRoute: PlansRoute,
