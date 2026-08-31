@@ -418,7 +418,10 @@ function BuilderPage() {
                     const idx = standardConnectorIds.indexOf(c.id);
                     const withinAllowance =
                       isStandard && (includedStd === null || (idx >= 0 ? idx < includedStd : standardConnectorIds.length < includedStd));
-                    const badge = c.quoteOnly
+                    const connQuote =
+                      c.quoteOnly ||
+                      connectorRequiresQuote(catalogue, c, { planId, market, cycle, premiumAppIds, connectorIds, addonQty });
+                    const badge = connQuote
                       ? "Custom / quote"
                       : isStandard && withinAllowance && !c.hasRecurringPrice
                         ? "Included"
