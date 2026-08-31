@@ -113,8 +113,9 @@ function BuilderPage() {
   const summary = summariseEntitlements(entitlements);
   const includedStd = plan?.custom ? null : (plan?.includedStandardConnectors ?? 0);
 
-  const confirm = () => {
-    if (!tenant || !plan || errors.length) return;
+  const confirm = (mode: "draft" | "commit") => {
+    if (!tenant || !plan) return;
+    if (mode === "commit" && errors.length) return;
     const now = new Date();
     const renewal = new Date(now);
     if (cycle === "annual") renewal.setFullYear(renewal.getFullYear() + 1);
@@ -139,8 +140,9 @@ function BuilderPage() {
       market,
       currency: marketRow.currency,
       billingCycle: cycle,
-      // Simulated lifecycle: DRAFT -> PENDING PAYMENT -> ACTIVE.
-      status: "pending_payment",
+      // Simulated lifecycle: DRAFT -> PENDING PAYMENT -> ACTIVE, or
+      // DRAFT -> QUOTE REQUIRED when no payable amount can be calculated.
+      status: mode === "draft" ? "draft" : needsQuote ? "quote_required" : "pending_payment",
       includedUsers: plan.includedUsers,
       additionalUsers: capacities.additionalUsers,
       standardAppsEntitled: true,
@@ -156,18 +158,32 @@ function BuilderPage() {
       catalogueVersion: catalogue.version,
       paymentProvider: marketRow.paymentProvider,
       paymentMode: "simulated",
-      paymentStatus: "awaiting_simulated_payment",
+      paymentStatus:
+        mode === "draft" ? "not_required" : needsQuote ? "quote_pending" : "awaiting_simulated_payment",
       startDate: now.toISOString(),
       renewalDate: renewal.toISOString(),
       cancellationRequested: false,
       cancellationEffective: null,
       entitlements,
       changeLog: [
-        stamp("created", `Subscription drafted on ${plan.name} from catalogue v${catalogue.version}`),
+        stamp(
+          mode === "commit" && needsQuote ? "quote_requested" : "created",
+          mode === "draft"
+            ? `Draft configuration saved on ${plan.name} from catalogue v${catalogue.version}`
+            : needsQuote
+              ? `Quote requested for ${plan.name} — ${quoteWhy.join("; ")}`
+              : `Subscription confirmed on ${plan.name} from catalogue v${catalogue.version}`,
+        ),
       ],
     };
     saveSubscription(sub);
-    toast.success("Subscription created — awaiting simulated payment");
+    toast.success(
+      mode === "draft"
+        ? "Draft saved — nothing has been purchased"
+        : needsQuote
+          ? "Quote required — no simulated payment is taken"
+          : "Subscription created — awaiting simulated payment",
+    );
     navigate({ to: "/tenants" });
   };
 
