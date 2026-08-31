@@ -252,6 +252,10 @@ export const CONNECTORS: Connector[] = CONNECTOR_SEEDS.map(
     hasRecurringPrice: rec !== null,
     hasOneTimePrice: once !== null,
     quoteOnly: classification === "Custom",
+    customCommercialTreatment:
+      id === "conn.legacy-erp"
+        ? "Negotiated per tenant based on ERP version, document volume and integration scope."
+        : undefined,
   }),
 );
 
