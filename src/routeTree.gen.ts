@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AddonsRouteImport } from './routes/addons'
 import { Route as AppsRouteImport } from './routes/apps'
+import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as EntitlementsRouteImport } from './routes/entitlements'
 import { Route as MarketsRouteImport } from './routes/markets'
@@ -33,6 +34,11 @@ const AddonsRoute = AddonsRouteImport.update({
 const AppsRoute = AppsRouteImport.update({
   id: '/apps',
   path: '/apps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangesRoute = ChangesRouteImport.update({
+  id: '/changes',
+  path: '/changes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectorsRoute = ConnectorsRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
+  '/changes': typeof ChangesRoute
   '/connectors': typeof ConnectorsRoute
   '/entitlements': typeof EntitlementsRoute
   '/markets': typeof MarketsRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
+  '/changes': typeof ChangesRoute
   '/connectors': typeof ConnectorsRoute
   '/entitlements': typeof EntitlementsRoute
   '/markets': typeof MarketsRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
+  '/changes': typeof ChangesRoute
   '/connectors': typeof ConnectorsRoute
   '/entitlements': typeof EntitlementsRoute
   '/markets': typeof MarketsRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/'
     | '/addons'
     | '/apps'
+    | '/changes'
     | '/connectors'
     | '/entitlements'
     | '/markets'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/'
     | '/addons'
     | '/apps'
+    | '/changes'
     | '/connectors'
     | '/entitlements'
     | '/markets'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/addons'
     | '/apps'
+    | '/changes'
     | '/connectors'
     | '/entitlements'
     | '/markets'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddonsRoute: typeof AddonsRoute
   AppsRoute: typeof AppsRoute
+  ChangesRoute: typeof ChangesRoute
   ConnectorsRoute: typeof ConnectorsRoute
   EntitlementsRoute: typeof EntitlementsRoute
   MarketsRoute: typeof MarketsRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/apps'
       fullPath: '/apps'
       preLoaderRoute: typeof AppsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changes': {
+      id: '/changes'
+      path: '/changes'
+      fullPath: '/changes'
+      preLoaderRoute: typeof ChangesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connectors': {
@@ -239,6 +259,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddonsRoute: AddonsRoute,
   AppsRoute: AppsRoute,
+  ChangesRoute: ChangesRoute,
   ConnectorsRoute: ConnectorsRoute,
   EntitlementsRoute: EntitlementsRoute,
   MarketsRoute: MarketsRoute,
