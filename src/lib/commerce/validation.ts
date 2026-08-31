@@ -1,5 +1,19 @@
 import { findPrice } from "./pricing";
-import type { BillingCycle, Catalogue, MarketId } from "./types";
+import type { BillingCycle, Catalogue, Connector, MarketId } from "./types";
+
+/** True when a connector has at least one calculable payable amount in this selection. */
+function hasCalculableAmount(catalogue: Catalogue, c: Connector, sel: Selection): boolean {
+  if (c.hasRecurringPrice) {
+    const rule = findPrice(catalogue, c.id, sel.market);
+    const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
+    if (rule && !rule.quoteOnly && amount !== null && amount !== undefined) return true;
+  }
+  if (c.hasOneTimePrice) {
+    const setup = findPrice(catalogue, `${c.id}:setup`, sel.market);
+    if (setup && !setup.quoteOnly && setup.monthly !== null && setup.monthly !== undefined) return true;
+  }
+  return false;
+}
 
 export interface Issue {
   id: string;
