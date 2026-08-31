@@ -229,6 +229,7 @@ const CONNECTOR_SEEDS: ConnSeed[] = [
   ["conn.delhivery", "Delhivery", "Logistics", "Additional", "Shipment booking and tracking.", 19, null, "Medium"],
   ["conn.sap", "SAP ECC / S4", "Data", "Custom", "Bespoke master-data and document integration.", null, null, "High"],
   ["conn.custom", "Custom Connector", "Custom", "Custom", "Aurumi-built integration to a bespoke system.", null, null, "High"],
+  ["conn.legacy-erp", "Legacy ERP Bridge", "Data", "Additional", "Bespoke bridge to a tenant's legacy ERP. Commercially negotiated per tenant.", null, null, "High"],
 ];
 
 export const CONNECTORS: Connector[] = CONNECTOR_SEEDS.map(
@@ -251,6 +252,12 @@ export const CONNECTORS: Connector[] = CONNECTOR_SEEDS.map(
     hasRecurringPrice: rec !== null,
     hasOneTimePrice: once !== null,
     quoteOnly: classification === "Custom",
+    ...(id === "conn.legacy-erp"
+      ? {
+          customCommercialTreatment:
+            "Negotiated per tenant based on ERP version, document volume and integration scope.",
+        }
+      : {}),
   }),
 );
 

@@ -1,5 +1,19 @@
 import { findPrice } from "./pricing";
-import type { BillingCycle, Catalogue, MarketId } from "./types";
+import type { BillingCycle, Catalogue, Connector, MarketId } from "./types";
+
+/** True when a connector has at least one calculable payable amount in this selection. */
+function hasCalculableAmount(catalogue: Catalogue, c: Connector, sel: Selection): boolean {
+  if (c.hasRecurringPrice) {
+    const rule = findPrice(catalogue, c.id, sel.market);
+    const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
+    if (rule && !rule.quoteOnly && amount !== null && amount !== undefined) return true;
+  }
+  if (c.hasOneTimePrice) {
+    const setup = findPrice(catalogue, `${c.id}:setup`, sel.market);
+    if (setup && !setup.quoteOnly && setup.monthly !== null && setup.monthly !== undefined) return true;
+  }
+  return false;
+}
 
 export interface Issue {
   id: string;
@@ -33,12 +47,23 @@ export function quoteReasons(catalogue: Catalogue, sel: Selection): string[] {
     if (!c) continue;
     if (c.quoteOnly) reasons.push(`${c.name} is a quote-only connector`);
     else if (findPrice(catalogue, id, sel.market)?.quoteOnly) reasons.push(`${c.name} has a quote-only price`);
+    else if (connectorRequiresQuote(catalogue, c, sel)) {
+      reasons.push(`${c.name} has a custom commercial treatment — quote required`);
+    }
   }
   return reasons;
 }
 
 export function requiresQuote(catalogue: Catalogue, sel: Selection): boolean {
   return quoteReasons(catalogue, sel).length > 0;
+}
+
+/**
+ * A bespoke-commercial-treatment connector whose amount cannot be calculated
+ * in this selection must be quoted — never charged as $0 or sent to payment.
+ */
+export function connectorRequiresQuote(catalogue: Catalogue, c: Connector, sel: Selection): boolean {
+  return Boolean(c.customCommercialTreatment) && !c.quoteOnly && !hasCalculableAmount(catalogue, c, sel);
 }
 
 /** Add-ons with a non-zero quantity that the current plan/market no longer allows. */
@@ -178,7 +203,7 @@ export function validateSelection(catalogue: Catalogue, sel: Selection): Issue[]
     if (c.hasRecurringPrice) {
       const rule = findPrice(catalogue, c.id, sel.market);
       const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
-      if (!c.quoteOnly && (amount === null || amount === undefined)) {
+      if (!c.quoteOnly && !connectorRequiresQuote(catalogue, c, sel) && (amount === null || amount === undefined)) {
         issues.push({
           id: `conn.price:${id}`,
           severity: "error",
@@ -193,6 +218,13 @@ export function validateSelection(catalogue: Catalogue, sel: Selection): Issue[]
         severity: "warning",
         message: `${c.name} is quote-only`,
         reason: "It is excluded from calculated totals and must be priced through a custom quote.",
+      });
+    } else if (connectorRequiresQuote(catalogue, c, sel)) {
+      issues.push({
+        id: `conn.custom-quote:${id}`,
+        severity: "warning",
+        message: `${c.name} has a custom commercial treatment`,
+        reason: "Its amount cannot be calculated, so it is excluded from payable totals and requires a quote.",
       });
     }
     if (c.professionalServicesRequired) {

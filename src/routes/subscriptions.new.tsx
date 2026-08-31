@@ -14,6 +14,7 @@ import { useCommerce } from "@/lib/commerce/store";
 import { activePromotions, findPrice, formatMoney } from "@/lib/commerce/pricing";
 import { addOnCapacities, buildQuote, CHARGE_CLASS_LABEL } from "@/lib/commerce/cart";
 import {
+  connectorRequiresQuote,
   ineligibleAddOnSelections,
   quoteReasons,
   validateSelection,
@@ -417,7 +418,10 @@ function BuilderPage() {
                     const idx = standardConnectorIds.indexOf(c.id);
                     const withinAllowance =
                       isStandard && (includedStd === null || (idx >= 0 ? idx < includedStd : standardConnectorIds.length < includedStd));
-                    const badge = c.quoteOnly
+                    const connQuote =
+                      c.quoteOnly ||
+                      connectorRequiresQuote(catalogue, c, { planId, market, cycle, premiumAppIds, connectorIds, addonQty });
+                    const badge = connQuote
                       ? "Custom / quote"
                       : isStandard && withinAllowance && !c.hasRecurringPrice
                         ? "Included"
@@ -445,7 +449,10 @@ function BuilderPage() {
                         </span>
                         <span className="shrink-0 text-right text-xs tabular">
                           <Badge variant={badge === "Included" ? "secondary" : "outline"}>{badge}</Badge>
-                          {c.hasRecurringPrice && !c.quoteOnly ? (
+                          {connQuote && !c.quoteOnly ? (
+                            <div className="mt-1 text-muted-foreground">Custom pricing — quote required</div>
+                          ) : null}
+                          {c.hasRecurringPrice && !connQuote ? (
                             <div className="mt-1">
                               {formatMoney(
                                 cycle === "monthly" ? (rec?.monthly ?? null) : (rec?.annual ?? null),
@@ -454,7 +461,7 @@ function BuilderPage() {
                               recurring
                             </div>
                           ) : null}
-                          {c.hasOneTimePrice ? (
+                          {c.hasOneTimePrice && !connQuote ? (
                             <div className="text-muted-foreground">
                               {formatMoney(setup?.monthly ?? null, marketRow.currency)} one-time
                             </div>
