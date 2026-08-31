@@ -203,7 +203,7 @@ export function validateSelection(catalogue: Catalogue, sel: Selection): Issue[]
     if (c.hasRecurringPrice) {
       const rule = findPrice(catalogue, c.id, sel.market);
       const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
-      if (!c.quoteOnly && (amount === null || amount === undefined)) {
+      if (!c.quoteOnly && !connectorRequiresQuote(catalogue, c, sel) && (amount === null || amount === undefined)) {
         issues.push({
           id: `conn.price:${id}`,
           severity: "error",
@@ -218,6 +218,13 @@ export function validateSelection(catalogue: Catalogue, sel: Selection): Issue[]
         severity: "warning",
         message: `${c.name} is quote-only`,
         reason: "It is excluded from calculated totals and must be priced through a custom quote.",
+      });
+    } else if (connectorRequiresQuote(catalogue, c, sel)) {
+      issues.push({
+        id: `conn.custom-quote:${id}`,
+        severity: "warning",
+        message: `${c.name} has a custom commercial treatment`,
+        reason: "Its amount cannot be calculated, so it is excluded from payable totals and requires a quote.",
       });
     }
     if (c.professionalServicesRequired) {
