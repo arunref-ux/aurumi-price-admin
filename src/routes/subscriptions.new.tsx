@@ -14,6 +14,7 @@ import { useCommerce } from "@/lib/commerce/store";
 import { activePromotions, findPrice, formatMoney } from "@/lib/commerce/pricing";
 import { addOnCapacities, buildQuote, CHARGE_CLASS_LABEL } from "@/lib/commerce/cart";
 import {
+  connectorRequiresQuote,
   ineligibleAddOnSelections,
   quoteReasons,
   validateSelection,
