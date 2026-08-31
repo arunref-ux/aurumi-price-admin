@@ -18,6 +18,67 @@ export interface Selection {
 }
 
 /**
+ * A configuration needs a commercial quote when any selected item has no
+ * calculable amount (custom plan, quote-only price rule or connector).
+ * Such a configuration must never enter simulated payment.
+ */
+export function quoteReasons(catalogue: Catalogue, sel: Selection): string[] {
+  const reasons: string[] = [];
+  const plan = catalogue.plans.find((p) => p.id === sel.planId);
+  if (plan?.custom) reasons.push(`${plan.name} is priced by contract`);
+  const planRule = findPrice(catalogue, sel.planId, sel.market);
+  if (planRule?.quoteOnly && !plan?.custom) reasons.push(`${plan?.name ?? sel.planId} is quote-only in this market`);
+  for (const id of sel.connectorIds) {
+    const c = catalogue.connectors.find((x) => x.id === id);
+    if (!c) continue;
+    if (c.quoteOnly) reasons.push(`${c.name} is a quote-only connector`);
+    else if (findPrice(catalogue, id, sel.market)?.quoteOnly) reasons.push(`${c.name} has a quote-only price`);
+  }
+  return reasons;
+}
+
+export function requiresQuote(catalogue: Catalogue, sel: Selection): boolean {
+  return quoteReasons(catalogue, sel).length > 0;
+}
+
+/** Add-ons with a non-zero quantity that the current plan/market no longer allows. */
+export function ineligibleAddOnSelections(catalogue: Catalogue, sel: Selection) {
+  const out: { id: string; name: string; quantity: number; reason: string }[] = [];
+  const plan = catalogue.plans.find((p) => p.id === sel.planId);
+  for (const [id, qty] of Object.entries(sel.addonQty)) {
+    if (!qty) continue;
+    const a = catalogue.addOns.find((x) => x.id === id);
+    if (!a) {
+      out.push({ id, name: id, quantity: qty, reason: "This add-on no longer exists in the published catalogue." });
+      continue;
+    }
+    if (!a.active) {
+      out.push({ id, name: a.name, quantity: qty, reason: "This add-on is no longer sold." });
+      continue;
+    }
+    if (!a.eligiblePlans.includes(sel.planId)) {
+      out.push({
+        id,
+        name: a.name,
+        quantity: qty,
+        reason: `Not available on ${plan?.name ?? sel.planId}.`,
+      });
+      continue;
+    }
+    if (!a.eligibleMarkets.includes(sel.market)) {
+      out.push({ id, name: a.name, quantity: qty, reason: `Not sold in ${sel.market}.` });
+      continue;
+    }
+    const rule = findPrice(catalogue, id, sel.market);
+    const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
+    if (amount === null || amount === undefined) {
+      out.push({ id, name: a.name, quantity: qty, reason: `No ${sel.cycle} price published in ${sel.market}.` });
+    }
+  }
+  return out;
+}
+
+/**
  * Commercial validity of a tenant selection. Errors must be resolved before a
  * subscription can be confirmed; warnings are advisory.
  */
