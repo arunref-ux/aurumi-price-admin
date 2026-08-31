@@ -510,7 +510,35 @@ function BuilderPage() {
                       </div>
                     );
                   })}
+
+                {invalidAddOns.length ? (
+                  <div className="space-y-2">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Unavailable selections
+                    </div>
+                    {invalidAddOns.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between gap-3 rounded-md border border-destructive/50 bg-destructive/5 px-3 py-2"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            {a.name}
+                            <Badge variant="destructive">Unavailable</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Quantity {a.quantity} still selected · Not available for the selected plan/market. {a.reason}
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => clearAddOn(a.id)}>
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
+
             ) : null}
 
             {step === 6 ? (
