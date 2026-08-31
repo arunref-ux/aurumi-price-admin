@@ -243,6 +243,15 @@ export function validateSelection(catalogue: Catalogue, sel: Selection): Issue[]
         reason: "Reset the quantity, or change market.",
       });
     }
+    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) {
+      issues.push({
+        id: `addon.qtyvalue:${id}`,
+        severity: "error",
+        message: `${a.name} quantity is invalid`,
+        reason: "Quantity must be a whole, non-negative number.",
+      });
+      continue;
+    }
     if (qty % a.quantityStep !== 0) {
       issues.push({
         id: `addon.step:${id}`,
