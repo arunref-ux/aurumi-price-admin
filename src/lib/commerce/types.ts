@@ -115,7 +115,13 @@ export interface Connector {
   hasRecurringPrice: boolean;
   hasOneTimePrice: boolean;
   quoteOnly: boolean;
+  /**
+   * Free-text description of a bespoke commercial treatment, used when a
+   * sellable connector is neither priced nor quote-only.
+   */
+  customCommercialTreatment?: string;
 }
+
 
 export type AddOnUnit = "user" | "GB" | "AIC" | "TB";
 
@@ -239,12 +245,15 @@ export interface OrderTotals {
 
 export type SubscriptionStatus =
   | "draft"
+  /** Configuration contains items with no calculable amount — needs a quote. */
+  | "quote_required"
   | "pending_payment"
   | "active"
   | "payment_failed"
   | "pending_cancellation"
   | "cancelled"
   | "expired";
+
 
 /**
  * Simulated payment only. A real payment provider will own this state in a
