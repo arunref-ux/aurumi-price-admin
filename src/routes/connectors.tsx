@@ -3,6 +3,7 @@ import { useState } from "react";
 import { AdminLayout, PageHeader } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -100,6 +101,7 @@ function ConnectorsPage() {
                 <TableHead>Recurring</TableHead>
                 <TableHead>One-time setup</TableHead>
                 <TableHead>Setup</TableHead>
+                <TableHead>Commercial treatment</TableHead>
                 <TableHead>Impact (S / T / AI)</TableHead>
                 <TableHead>Active</TableHead>
               </TableRow>
@@ -140,6 +142,32 @@ function ConnectorsPage() {
                       {c.professionalServicesRequired ? (
                         <div className="text-muted-foreground">Professional services required</div>
                       ) : null}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {c.classification === "Standard" ? (
+                        <span className="text-muted-foreground">Included in plan allowance</span>
+                      ) : c.quoteOnly ? (
+                        <span className="text-muted-foreground">Quote-only</span>
+                      ) : c.hasRecurringPrice || c.hasOneTimePrice ? (
+                        <span className="text-muted-foreground">Priced</span>
+                      ) : (
+                        <div className="space-y-1">
+                          <Badge variant="destructive">Needs treatment</Badge>
+                          <Input
+                            className="h-8 w-52 text-xs"
+                            placeholder="Describe bespoke treatment"
+                            aria-label={`${c.name} commercial treatment`}
+                            value={c.customCommercialTreatment ?? ""}
+                            onChange={(e) =>
+                              patch(
+                                c.id,
+                                { customCommercialTreatment: e.target.value },
+                                `${c.name} commercial treatment`,
+                              )
+                            }
+                          />
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {c.storageImpact} / {c.transferImpact} / {c.intelligenceImpact}

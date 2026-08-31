@@ -41,6 +41,7 @@ export const Route = createFileRoute("/tenants")({
 
 const STATUS_COPY: Record<SubscriptionStatus, string> = {
   draft: "Draft",
+  quote_required: "Quote required",
   pending_payment: "Pending payment",
   active: "Active",
   payment_failed: "Payment failed",
@@ -53,6 +54,8 @@ function TenantsPage() {
   const { state, published, updateSubscription } = useCommerce();
   const [selectedId, setSelectedId] = useState<string | null>(state.subscriptions[0]?.id ?? null);
   const sub = state.subscriptions.find((s) => s.id === selectedId) ?? state.subscriptions[0] ?? null;
+
+  const needsQuote = (s: TenantSubscription) => s.lines.some((l) => l.quoteOnly);
 
   const tenantName = (id: string) => state.tenants.find((t) => t.id === id)?.name ?? id;
   const planName = (id: string) => published.plans.find((p) => p.id === id)?.name ?? id;
@@ -213,15 +216,68 @@ function TenantsPage() {
               <div className="space-y-1.5">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">Simulated lifecycle</div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">Draft</Badge>→
-                  <Badge variant={sub.status === "pending_payment" ? "default" : "outline"}>Pending payment</Badge>→
-                  <Badge variant={sub.status === "active" ? "default" : "outline"}>Active</Badge>
+                  <Badge variant={sub.status === "draft" ? "default" : "outline"}>Draft</Badge>→
+                  {needsQuote(sub) ? (
+                    <Badge variant={sub.status === "quote_required" ? "default" : "outline"}>Quote required</Badge>
+                  ) : (
+                    <>
+                      <Badge variant={sub.status === "pending_payment" ? "default" : "outline"}>Pending payment</Badge>
+                      →<Badge variant={sub.status === "active" ? "default" : "outline"}>Active</Badge>
+                    </>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     Payment mode: {sub.paymentMode} ({sub.paymentStatus.replaceAll("_", " ")}) via{" "}
                     {sub.paymentProvider}
                   </span>
                 </div>
+                {needsQuote(sub) ? (
+                  <p className="rounded-md border bg-secondary px-3 py-2 text-xs">
+                    Your configuration includes custom pricing. An Aurumi representative will prepare a quote. No
+                    simulated payment is taken for a quote-required configuration.
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2 pt-2">
+                  {sub.status === "draft" ? (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        needsQuote(sub)
+                          ? transition(
+                              sub,
+                              "quote_required",
+                              "quote_pending",
+                              "quote_requested",
+                              "Configuration submitted for quote — no payment due",
+                            )
+                          : transition(
+                              sub,
+                              "pending_payment",
+                              "awaiting_simulated_payment",
+                              "created",
+                              "Draft confirmed — awaiting simulated payment",
+                            )
+                      }
+                    >
+                      {needsQuote(sub) ? "Request quote" : "Confirm configuration"}
+                    </Button>
+                  ) : null}
+                  {sub.status === "quote_required" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        transition(
+                          sub,
+                          "quote_required",
+                          "quote_pending",
+                          "quote_requested",
+                          "Quote request re-sent to the Aurumi commercial team",
+                        )
+                      }
+                    >
+                      Request quote
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
                     disabled={sub.status !== "pending_payment" && sub.status !== "payment_failed"}

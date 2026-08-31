@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AdminLayout, PageHeader } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCommerce } from "@/lib/commerce/store";
 import { activePromotions, findPrice, formatMoney } from "@/lib/commerce/pricing";
 import { addOnCapacities, buildQuote, CHARGE_CLASS_LABEL } from "@/lib/commerce/cart";
-import { validateSelection, type Selection } from "@/lib/commerce/validation";
+import {
+  ineligibleAddOnSelections,
+  quoteReasons,
+  validateSelection,
+  type Selection,
+} from "@/lib/commerce/validation";
 import { deriveEntitlements, ENTITLEMENT_LABELS, summariseEntitlements } from "@/lib/commerce/entitlements";
 import type { BillingCycle, MarketId, TenantSubscription } from "@/lib/commerce/types";
 import { toast } from "sonner";
@@ -60,6 +65,32 @@ function BuilderPage() {
   const errors = issues.filter((i) => i.severity === "error");
   const warnings = issues.filter((i) => i.severity === "warning");
 
+  const invalidAddOns = useMemo(
+    () => ineligibleAddOnSelections(catalogue, selection),
+    [catalogue, JSON.stringify(selection)],
+  );
+  const quoteWhy = useMemo(() => quoteReasons(catalogue, selection), [catalogue, JSON.stringify(selection)]);
+  const needsQuote = quoteWhy.length > 0;
+
+  // Surface add-ons that became ineligible after a plan or market change.
+  const eligibilityKey = `${planId}|${market}`;
+  const lastEligibilityKey = useRef(eligibilityKey);
+  useEffect(() => {
+    if (lastEligibilityKey.current === eligibilityKey) return;
+    lastEligibilityKey.current = eligibilityKey;
+    if (invalidAddOns.length) {
+      toast.warning(
+        `${invalidAddOns.length} selected add-on(s) are not available for this plan/market — review the Capacity step.`,
+      );
+    }
+  }, [eligibilityKey, invalidAddOns.length]);
+
+  const clearAddOn = (id: string) => {
+    const next = { ...addonQty };
+    delete next[id];
+    setAddonQty(next);
+  };
+
   const promos = plan ? activePromotions(catalogue, plan.id, market, cycle, promoCode || null) : [];
   const { lines, totals } = useMemo(
     () => buildQuote(catalogue, selection, promoCode ? promos : []),
@@ -82,8 +113,9 @@ function BuilderPage() {
   const summary = summariseEntitlements(entitlements);
   const includedStd = plan?.custom ? null : (plan?.includedStandardConnectors ?? 0);
 
-  const confirm = () => {
-    if (!tenant || !plan || errors.length) return;
+  const confirm = (mode: "draft" | "commit") => {
+    if (!tenant || !plan) return;
+    if (mode === "commit" && errors.length) return;
     const now = new Date();
     const renewal = new Date(now);
     if (cycle === "annual") renewal.setFullYear(renewal.getFullYear() + 1);
@@ -108,8 +140,9 @@ function BuilderPage() {
       market,
       currency: marketRow.currency,
       billingCycle: cycle,
-      // Simulated lifecycle: DRAFT -> PENDING PAYMENT -> ACTIVE.
-      status: "pending_payment",
+      // Simulated lifecycle: DRAFT -> PENDING PAYMENT -> ACTIVE, or
+      // DRAFT -> QUOTE REQUIRED when no payable amount can be calculated.
+      status: mode === "draft" ? "draft" : needsQuote ? "quote_required" : "pending_payment",
       includedUsers: plan.includedUsers,
       additionalUsers: capacities.additionalUsers,
       standardAppsEntitled: true,
@@ -125,18 +158,32 @@ function BuilderPage() {
       catalogueVersion: catalogue.version,
       paymentProvider: marketRow.paymentProvider,
       paymentMode: "simulated",
-      paymentStatus: "awaiting_simulated_payment",
+      paymentStatus:
+        mode === "draft" ? "not_required" : needsQuote ? "quote_pending" : "awaiting_simulated_payment",
       startDate: now.toISOString(),
       renewalDate: renewal.toISOString(),
       cancellationRequested: false,
       cancellationEffective: null,
       entitlements,
       changeLog: [
-        stamp("created", `Subscription drafted on ${plan.name} from catalogue v${catalogue.version}`),
+        stamp(
+          mode === "commit" && needsQuote ? "quote_requested" : "created",
+          mode === "draft"
+            ? `Draft configuration saved on ${plan.name} from catalogue v${catalogue.version}`
+            : needsQuote
+              ? `Quote requested for ${plan.name} — ${quoteWhy.join("; ")}`
+              : `Subscription confirmed on ${plan.name} from catalogue v${catalogue.version}`,
+        ),
       ],
     };
     saveSubscription(sub);
-    toast.success("Subscription created — awaiting simulated payment");
+    toast.success(
+      mode === "draft"
+        ? "Draft saved — nothing has been purchased"
+        : needsQuote
+          ? "Quote required — no simulated payment is taken"
+          : "Subscription created — awaiting simulated payment",
+    );
     navigate({ to: "/tenants" });
   };
 
@@ -463,7 +510,35 @@ function BuilderPage() {
                       </div>
                     );
                   })}
+
+                {invalidAddOns.length ? (
+                  <div className="space-y-2">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Unavailable selections
+                    </div>
+                    {invalidAddOns.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between gap-3 rounded-md border border-destructive/50 bg-destructive/5 px-3 py-2"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 text-sm font-medium">
+                            {a.name}
+                            <Badge variant="destructive">Unavailable</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Quantity {a.quantity} still selected · Not available for the selected plan/market. {a.reason}
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => clearAddOn(a.id)}>
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
+
             ) : null}
 
             {step === 6 ? (
@@ -506,15 +581,49 @@ function BuilderPage() {
                   ))}
                 </div>
                 <Separator />
-                <p className="text-xs text-muted-foreground">
-                  Payment provider for {marketRow.name}: <strong>{marketRow.paymentProvider}</strong>. Checkout is
-                  <strong> simulated</strong> in this prototype — confirming records the subscription as
-                  <strong> pending payment</strong>. A real payment provider will determine the verified payment state
-                  in a later phase. No card details are collected.
-                </p>
-                <Button className="w-full" onClick={confirm} disabled={!tenant || !plan || errors.length > 0}>
-                  {errors.length ? `Resolve ${errors.length} blocking issue(s)` : "Create subscription (simulated)"}
-                </Button>
+                {needsQuote ? (
+                  <div className="rounded-md border bg-secondary px-3 py-2 text-xs">
+                    <div className="text-sm font-medium">Quote required</div>
+                    <p className="mt-1 text-muted-foreground">
+                      Your configuration includes custom pricing. An Aurumi representative will prepare a quote. No
+                      simulated payment is taken for this configuration.
+                    </p>
+                    <ul className="mt-1 list-disc pl-4 text-muted-foreground">
+                      {quoteWhy.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Payment provider for {marketRow.name}: <strong>{marketRow.paymentProvider}</strong>. Checkout is
+                    <strong> simulated</strong> in this prototype — confirming records the subscription as
+                    <strong> pending payment</strong>. A real payment provider will determine the verified payment
+                    state in a later phase. No card details are collected.
+                  </p>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="outline"
+                    className="sm:flex-1"
+                    onClick={() => confirm("draft")}
+                    disabled={!tenant || !plan}
+                  >
+                    Save as draft
+                  </Button>
+                  <Button
+                    className="sm:flex-1"
+                    onClick={() => confirm("commit")}
+                    disabled={!tenant || !plan || errors.length > 0}
+                  >
+                    {errors.length
+                      ? `Resolve ${errors.length} blocking issue(s)`
+                      : needsQuote
+                        ? "Request quote"
+                        : "Confirm — proceed to simulated payment"}
+                  </Button>
+                </div>
+
               </div>
             ) : null}
 

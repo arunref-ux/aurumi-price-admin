@@ -18,6 +18,67 @@ export interface Selection {
 }
 
 /**
+ * A configuration needs a commercial quote when any selected item has no
+ * calculable amount (custom plan, quote-only price rule or connector).
+ * Such a configuration must never enter simulated payment.
+ */
+export function quoteReasons(catalogue: Catalogue, sel: Selection): string[] {
+  const reasons: string[] = [];
+  const plan = catalogue.plans.find((p) => p.id === sel.planId);
+  if (plan?.custom) reasons.push(`${plan.name} is priced by contract`);
+  const planRule = findPrice(catalogue, sel.planId, sel.market);
+  if (planRule?.quoteOnly && !plan?.custom) reasons.push(`${plan?.name ?? sel.planId} is quote-only in this market`);
+  for (const id of sel.connectorIds) {
+    const c = catalogue.connectors.find((x) => x.id === id);
+    if (!c) continue;
+    if (c.quoteOnly) reasons.push(`${c.name} is a quote-only connector`);
+    else if (findPrice(catalogue, id, sel.market)?.quoteOnly) reasons.push(`${c.name} has a quote-only price`);
+  }
+  return reasons;
+}
+
+export function requiresQuote(catalogue: Catalogue, sel: Selection): boolean {
+  return quoteReasons(catalogue, sel).length > 0;
+}
+
+/** Add-ons with a non-zero quantity that the current plan/market no longer allows. */
+export function ineligibleAddOnSelections(catalogue: Catalogue, sel: Selection) {
+  const out: { id: string; name: string; quantity: number; reason: string }[] = [];
+  const plan = catalogue.plans.find((p) => p.id === sel.planId);
+  for (const [id, qty] of Object.entries(sel.addonQty)) {
+    if (!qty) continue;
+    const a = catalogue.addOns.find((x) => x.id === id);
+    if (!a) {
+      out.push({ id, name: id, quantity: qty, reason: "This add-on no longer exists in the published catalogue." });
+      continue;
+    }
+    if (!a.active) {
+      out.push({ id, name: a.name, quantity: qty, reason: "This add-on is no longer sold." });
+      continue;
+    }
+    if (!a.eligiblePlans.includes(sel.planId)) {
+      out.push({
+        id,
+        name: a.name,
+        quantity: qty,
+        reason: `Not available on ${plan?.name ?? sel.planId}.`,
+      });
+      continue;
+    }
+    if (!a.eligibleMarkets.includes(sel.market)) {
+      out.push({ id, name: a.name, quantity: qty, reason: `Not sold in ${sel.market}.` });
+      continue;
+    }
+    const rule = findPrice(catalogue, id, sel.market);
+    const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
+    if (amount === null || amount === undefined) {
+      out.push({ id, name: a.name, quantity: qty, reason: `No ${sel.cycle} price published in ${sel.market}.` });
+    }
+  }
+  return out;
+}
+
+/**
  * Commercial validity of a tenant selection. Errors must be resolved before a
  * subscription can be confirmed; warnings are advisory.
  */
@@ -182,6 +243,15 @@ export function validateSelection(catalogue: Catalogue, sel: Selection): Issue[]
         reason: "Reset the quantity, or change market.",
       });
     }
+    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) {
+      issues.push({
+        id: `addon.qtyvalue:${id}`,
+        severity: "error",
+        message: `${a.name} quantity is invalid`,
+        reason: "Quantity must be a whole, non-negative number.",
+      });
+      continue;
+    }
     if (qty % a.quantityStep !== 0) {
       issues.push({
         id: `addon.step:${id}`,
@@ -329,5 +399,116 @@ export function validateCatalogue(catalogue: Catalogue): Issue[] {
     }
   }
 
+  // Every sellable Additional / Custom Connector needs an explicit commercial treatment.
+  for (const c of catalogue.connectors.filter(
+    (x) => x.active && x.classification !== "Standard" && x.status !== "Planned" && x.status !== "Deprecated",
+  )) {
+    const treated =
+      c.hasRecurringPrice ||
+      c.hasOneTimePrice ||
+      c.quoteOnly ||
+      Boolean(c.customCommercialTreatment && c.customCommercialTreatment.trim());
+    if (!treated) {
+      issues.push({
+        id: `conn.treatment:${c.id}`,
+        severity: "error",
+        message: `${c.classification} Connector ${c.name} has no commercial treatment`,
+        reason:
+          "A sellable Additional/Custom Connector must have a recurring price, a one-time implementation price, be quote-only, or state an explicit custom commercial treatment.",
+      });
+    }
+  }
+
+  // Price integrity: amounts must be finite and non-negative.
+  for (const r of catalogue.prices) {
+    const bad = ([["monthly", r.monthly], ["annual", r.annual]] as const).filter(
+      ([, v]) => v !== null && (!Number.isFinite(v) || (v as number) < 0),
+    );
+    for (const [field] of bad) {
+      issues.push({
+        id: `price.invalid:${r.productId}:${r.market}:${field}`,
+        severity: "error",
+        message: `${r.productId} has an invalid ${field} price in ${r.market}`,
+        reason: "Prices must be finite, non-negative numbers.",
+      });
+    }
+    if (!Number.isFinite(r.annualDiscountPct) || r.annualDiscountPct < 0 || r.annualDiscountPct > 100) {
+      issues.push({
+        id: `price.discount:${r.productId}:${r.market}`,
+        severity: "error",
+        message: `${r.productId} has an invalid annual discount in ${r.market}`,
+        reason: "Annual discount must be between 0 and 100 percent.",
+      });
+    }
+  }
+
+  // Add-on quantity integrity.
+  for (const a of catalogue.addOns.filter((x) => x.active)) {
+    const ints: [string, number][] = [
+      ["unit size", a.unitSize],
+      ["increment", a.quantityStep],
+      ["minimum quantity", a.minQuantity],
+    ];
+    if (a.maxQuantity !== null) ints.push(["maximum quantity", a.maxQuantity]);
+    for (const [label, v] of ints) {
+      if (!Number.isFinite(v) || v < 0 || !Number.isInteger(v)) {
+        issues.push({
+          id: `addon.qty:${a.id}:${label}`,
+          severity: "error",
+          message: `${a.name} has an invalid ${label}`,
+          reason: "Quantities must be whole, finite, non-negative numbers.",
+        });
+      }
+    }
+  }
+
+  // Plan capacity integrity.
+  for (const p of catalogue.plans.filter((x) => x.active && !x.custom)) {
+    for (const [label, v] of [
+      ["included users", p.includedUsers],
+      ["Intelligence capacity", p.includedIntelligence],
+      ["storage", p.includedStorageGb],
+      ["data transfer", p.includedTransferGb],
+      ["included Standard Connectors", p.includedStandardConnectors],
+    ] as const) {
+      if (v !== null && v !== undefined && (!Number.isFinite(v) || v < 0)) {
+        issues.push({
+          id: `plan.badcapacity:${p.id}:${label}`,
+          severity: "error",
+          message: `${p.name} has an invalid ${label}`,
+          reason: "Capacity values must be finite and non-negative.",
+        });
+      }
+    }
+  }
+
+  // Promotion value integrity.
+  for (const p of catalogue.promotions.filter((x) => x.active)) {
+    if (!Number.isFinite(p.value) || p.value < 0) {
+      issues.push({
+        id: `promo.value:${p.id}`,
+        severity: "error",
+        message: `Promotion ${p.name} has an invalid value`,
+        reason: "Discount values must be finite and non-negative.",
+      });
+    } else if ((p.type === "percentage" || p.type === "first_period") && p.value > 100) {
+      issues.push({
+        id: `promo.pct:${p.id}`,
+        severity: "error",
+        message: `Promotion ${p.name} discounts more than 100%`,
+        reason: "Percentage discounts must be between 0 and 100.",
+      });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(p.endDate)) {
+      issues.push({
+        id: `promo.datefmt:${p.id}`,
+        severity: "error",
+        message: `Promotion ${p.name} has an invalid date`,
+        reason: "Start and end dates must be valid calendar dates (YYYY-MM-DD).",
+      });
+    }
+  }
+
   return issues;
+
 }

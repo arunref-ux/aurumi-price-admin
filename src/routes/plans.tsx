@@ -352,6 +352,8 @@ export function NumField({
     <Field label={label}>
       <Input
         type="number"
+        min={0}
+        aria-invalid={value !== null && (!Number.isFinite(value) || value < 0)}
         className="tabular"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
