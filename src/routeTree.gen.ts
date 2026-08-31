@@ -15,6 +15,7 @@ import { Route as AppsRouteImport } from './routes/apps'
 import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as MarketsRouteImport } from './routes/markets'
 import { Route as PlansRouteImport } from './routes/plans'
+import { Route as PromotionsRouteImport } from './routes/promotions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const PlansRoute = PlansRouteImport.update({
   path: '/plans',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PromotionsRoute = PromotionsRouteImport.update({
+  id: '/promotions',
+  path: '/promotions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/connectors': typeof ConnectorsRoute
   '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
+  '/promotions': typeof PromotionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/connectors': typeof ConnectorsRoute
   '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
+  '/promotions': typeof PromotionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,12 +79,27 @@ export interface FileRoutesById {
   '/connectors': typeof ConnectorsRoute
   '/markets': typeof MarketsRoute
   '/plans': typeof PlansRoute
+  '/promotions': typeof PromotionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/addons' | '/apps' | '/connectors' | '/markets' | '/plans'
+  fullPaths:
+    | '/'
+    | '/addons'
+    | '/apps'
+    | '/connectors'
+    | '/markets'
+    | '/plans'
+    | '/promotions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/addons' | '/apps' | '/connectors' | '/markets' | '/plans'
+  to:
+    | '/'
+    | '/addons'
+    | '/apps'
+    | '/connectors'
+    | '/markets'
+    | '/plans'
+    | '/promotions'
   id:
     | '__root__'
     | '/'
@@ -85,6 +108,7 @@ export interface FileRouteTypes {
     | '/connectors'
     | '/markets'
     | '/plans'
+    | '/promotions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,6 +118,7 @@ export interface RootRouteChildren {
   ConnectorsRoute: typeof ConnectorsRoute
   MarketsRoute: typeof MarketsRoute
   PlansRoute: typeof PlansRoute
+  PromotionsRoute: typeof PromotionsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -140,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/promotions': {
+      id: '/promotions'
+      path: '/promotions'
+      fullPath: '/promotions'
+      preLoaderRoute: typeof PromotionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -150,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectorsRoute: ConnectorsRoute,
   MarketsRoute: MarketsRoute,
   PlansRoute: PlansRoute,
+  PromotionsRoute: PromotionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
