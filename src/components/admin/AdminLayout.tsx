@@ -44,7 +44,17 @@ const TENANT_NAV = [
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { hasUnpublishedChanges, publish, discardDraft, state, canPublish, catalogueIssues } = useCommerce();
+  const {
+    hasUnpublishedChanges,
+    publish,
+    discardDraft,
+    state,
+    canPublish,
+    catalogueIssues,
+    migration,
+    migrateLegacyData,
+    startFresh,
+  } = useCommerce();
   const blocking = catalogueIssues.filter((i) => i.severity === "error").length;
 
   return (
@@ -128,6 +138,36 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
           </div>
         </header>
+        {migration.kind === "offered" ? (
+          <div className="border-b bg-secondary px-6 py-3" role="alert">
+            <div className="text-sm font-medium">Existing prototype data found in the previous storage format</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The simulated storage format changed. Your tenants, subscriptions and activity log can be carried over;
+              the catalogue is rebuilt from the current model. Nothing is discarded until you choose.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  migrateLegacyData();
+                  toast.success("Existing prototype data migrated");
+                }}
+              >
+                Migrate existing data
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  startFresh();
+                  toast.success("Started from a fresh seeded catalogue");
+                }}
+              >
+                Start fresh
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <main className="min-w-0 flex-1 px-6 py-6">{children}</main>
       </div>
     </div>
