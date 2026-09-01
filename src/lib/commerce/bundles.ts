@@ -115,3 +115,24 @@ export function bundleQuoteReasons(components: ResolvedBundleComponent[]): strin
     .filter((c) => c.treatment === "quote_required" && c.required)
     .map((c) => `${c.label}: quote required`);
 }
+
+/**
+ * Purchase eligibility. Legacy stored bundles (written before the two
+ * commercial permissions existed) are read as eligible through both routes,
+ * which matches how they were previously sold.
+ */
+export function bundleEligibility(bundle: BundleOffer): {
+  availableDirectlyWithAura: boolean;
+  availableAsWorkspaceAddon: boolean;
+} {
+  return {
+    availableDirectlyWithAura: bundle.availableDirectlyWithAura !== false,
+    availableAsWorkspaceAddon: bundle.availableAsWorkspaceAddon !== false,
+  };
+}
+
+/** DERIVED — never stored. */
+export function bundleRequiresWorkspace(bundle: BundleOffer): boolean {
+  const e = bundleEligibility(bundle);
+  return !e.availableDirectlyWithAura && e.availableAsWorkspaceAddon;
+}

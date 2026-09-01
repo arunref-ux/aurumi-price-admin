@@ -15,7 +15,7 @@ import {
   seedState,
 } from "./seed";
 import { auraOfferComponents } from "./aura";
-import { bundleComponents } from "./bundles";
+import { bundleComponents, bundleEligibility } from "./bundles";
 import { validateCatalogue, type Issue } from "./validation";
 import type { Catalogue, CommerceState, TenantSubscription } from "./types";
 
@@ -80,7 +80,11 @@ function normaliseCatalogue(c: Catalogue, scope: "draft" | "published"): Catalog
     // Offers stored before explicit commercial components get the implicit
     // single Aura recurring charge, so nothing loses its commercial meaning.
     auraOffers: offers.map((o) => ({ ...o, components: auraOfferComponents(o) })),
-    bundles: bundles.map((b) => ({ ...b, components: bundleComponents(b) })),
+    bundles: bundles.map((b) => ({
+      ...b,
+      components: bundleComponents(b),
+      ...bundleEligibility(b),
+    })),
     connectors: [...connectors, ...missingConnectors].map((conn) => ({
       ...conn,
       standaloneAuraOffering: Boolean(conn.standaloneAuraOffering),
