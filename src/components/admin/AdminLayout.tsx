@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Layers,
   Megaphone,
+  Package,
   Percent,
   Plug,
   Settings2,
@@ -32,6 +33,7 @@ const CONFIG_NAV = [
   { to: "/connectors", label: "Connectors", icon: Plug },
   { to: "/addons", label: "Capacity & Add-ons", icon: Boxes },
   { to: "/aura-offers", label: "Standalone Aura Offers", icon: Sparkles },
+  { to: "/bundles", label: "Bundles", icon: Package },
   { to: "/markets", label: "Markets & Pricing", icon: Globe2 },
   { to: "/promotions", label: "Promotions", icon: Percent },
   { to: "/rules", label: "Subscription Rules", icon: ShieldCheck },
@@ -48,6 +50,12 @@ const TENANT_NAV = [
 const DEMO_NAV = [
   { to: "/aura/tally", label: "Aura + Tally (Product Demo)", icon: Megaphone, external: true },
   { to: "/aura/quickbooks", label: "Aura + QuickBooks (Product Demo)", icon: Megaphone, external: true },
+  {
+    to: "/bundles/finance-cash-flow",
+    label: "Finance & Cash Flow Bundle (Demo)",
+    icon: Megaphone,
+    external: true,
+  },
 ] as const;
 
 export function AdminLayout({ children }: { children: ReactNode }) {
