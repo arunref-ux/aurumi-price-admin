@@ -1,7 +1,9 @@
 import { computeTotals, findPrice } from "./pricing";
 import type { PricedLine } from "./cart";
 import type {
+  AuraCommercialTreatment,
   AuraOffer,
+  AuraOfferComponent,
   BillingCycle,
   Catalogue,
   Entitlement,
@@ -50,19 +52,113 @@ export function auraOfferAddOns(catalogue: Catalogue, offer: AuraOffer, market: 
   );
 }
 
+/**
+ * Commercial components of an offer, resolved against the catalogue for one
+ * market. Components are the explicit commercial model: recurring, one-time,
+ * included or quote-required. A priced component whose price cannot be
+ * calculated degrades to "quote_required" rather than showing a misleading 0.
+ */
+export interface ResolvedAuraComponent {
+  id: string;
+  label: string;
+  kind: AuraOfferComponent["kind"];
+  treatment: AuraCommercialTreatment;
+  note?: string | undefined;
+  required: boolean;
+  monthly: number | null;
+  annual: number | null;
+  oneTime: number | null;
+}
+
+/** Offers written before the component model get an implicit Aura recurring charge. */
+export function auraOfferComponents(offer: AuraOffer): AuraOfferComponent[] {
+  if (Array.isArray(offer.components) && offer.components.length) return offer.components;
+  return [
+    {
+      id: `${offer.id}:aura`,
+      label: "Aura",
+      kind: "aura",
+      treatment: offer.quoteOnly ? "quote_required" : "recurring",
+      productId: offer.id,
+      required: true,
+    },
+  ];
+}
+
+export function auraCommercialComponents(
+  catalogue: Catalogue,
+  offer: AuraOffer,
+  market: MarketId,
+): ResolvedAuraComponent[] {
+  const out: ResolvedAuraComponent[] = auraOfferComponents(offer).map((c) => {
+    const base: ResolvedAuraComponent = {
+      id: c.id,
+      label: c.label,
+      kind: c.kind,
+      treatment: c.treatment,
+      note: c.note,
+      required: c.required !== false,
+      monthly: null,
+      annual: null,
+      oneTime: null,
+    };
+    if (c.treatment === "included" || c.treatment === "quote_required") return base;
+
+    const rule = c.productId ? findPrice(catalogue, c.productId, market) : undefined;
+    const quoted = offer.quoteOnly || !rule || Boolean(rule.quoteOnly);
+
+    if (c.treatment === "one_time") {
+      const amount = rule?.monthly ?? null;
+      if (quoted || amount === null) return { ...base, treatment: "quote_required" };
+      return { ...base, oneTime: amount };
+    }
+    if (quoted || rule?.monthly === null || rule?.annual === null) {
+      return { ...base, treatment: "quote_required" };
+    }
+    return { ...base, monthly: rule!.monthly, annual: rule!.annual };
+  });
+
+  const connector = catalogue.connectors.find((c) => c.id === offer.connectorId);
+  if (connector?.quoteOnly && !out.some((c) => c.kind === "connector")) {
+    out.push({
+      id: `${offer.id}:connector`,
+      label: `${connector.name} connection`,
+      kind: "connector",
+      treatment: "quote_required",
+      required: true,
+      monthly: null,
+      annual: null,
+      oneTime: null,
+    });
+  }
+  if (
+    offer.professionalServicesRequired &&
+    !out.some((c) => c.kind === "professional_services")
+  ) {
+    out.push({
+      id: `${offer.id}:ps`,
+      label: "Implementation / professional services",
+      kind: "professional_services",
+      treatment: "quote_required",
+      required: true,
+      monthly: null,
+      annual: null,
+      oneTime: null,
+    });
+  }
+  return out;
+}
+
 export function auraQuoteReasons(catalogue: Catalogue, sel: AuraSelection): string[] {
   const offer = findAuraOffer(catalogue, sel.offerId);
   if (!offer) return [];
   const reasons: string[] = [];
-  const rule = findPrice(catalogue, offer.id, sel.market);
-  const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
   if (offer.quoteOnly) reasons.push(`${offer.name} is priced by quote`);
-  else if (rule?.quoteOnly) reasons.push(`${offer.name} is quote-only in this market`);
-  else if (amount === null || amount === undefined) {
-    reasons.push(`${offer.name} has no calculable ${sel.cycle} price in this market`);
+  for (const c of auraCommercialComponents(catalogue, offer, sel.market)) {
+    if (c.treatment === "quote_required" && c.required) {
+      reasons.push(`${c.label} requires a quote`);
+    }
   }
-  const connector = catalogue.connectors.find((c) => c.id === offer.connectorId);
-  if (connector?.quoteOnly) reasons.push(`${connector.name} is a quote-only connector`);
   return reasons;
 }
 
@@ -124,15 +220,17 @@ export function validateAuraSelection(catalogue: Catalogue, sel: AuraSelection):
       reason: "Enable the market on the offer, or choose another market.",
     });
   }
-  const rule = findPrice(catalogue, offer.id, sel.market);
-  const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
-  if (!offer.quoteOnly && !rule?.quoteOnly && (amount === null || amount === undefined)) {
-    issues.push({
-      id: `aura.price:${offer.id}`,
-      severity: "error",
-      message: `${offer.name} has no ${sel.cycle} price in this market`,
-      reason: "Publish a price for the offer in this market before it can be sold.",
-    });
+  // A component with no calculable price is not a blocking error — it routes
+  // the configuration to DRAFT -> QUOTE REQUIRED (see auraQuoteReasons).
+  for (const c of auraCommercialComponents(catalogue, offer, sel.market)) {
+    if (c.treatment === "quote_required" && c.required) {
+      issues.push({
+        id: `aura.component.quote:${c.id}`,
+        severity: "warning",
+        message: `${c.label} has no calculable price in this market`,
+        reason: "This configuration must be quoted; it cannot enter simulated payment.",
+      });
+    }
   }
 
   for (const [id, qty] of Object.entries(sel.addonQty)) {
@@ -233,31 +331,76 @@ export function ineligibleAuraAddOns(catalogue: Catalogue, sel: AuraSelection) {
   return out;
 }
 
+/** One priced/annotated line per commercial component, then per add-on. */
 export function buildAuraLines(catalogue: Catalogue, sel: AuraSelection): PricedLine[] {
   const offer = findAuraOffer(catalogue, sel.offerId);
   if (!offer) return [];
   const lines: PricedLine[] = [];
-  const rule = findPrice(catalogue, offer.id, sel.market);
-  const amount = sel.cycle === "monthly" ? rule?.monthly : rule?.annual;
-  const quoted = offer.quoteOnly || Boolean(rule?.quoteOnly) || amount === null || amount === undefined;
-  lines.push({
-    id: `aura-${offer.id}`,
-    productId: offer.id,
-    kind: "plan",
-    label: `${offer.name} (${sel.cycle === "monthly" ? "monthly" : "annual"})`,
-    quantity: 1,
-    unitAmount: quoted ? 0 : (amount as number),
-    recurring: true,
-    quoteOnly: quoted,
-    chargeClass: quoted ? "custom_quote" : "add_on",
-  });
+
+  for (const c of auraCommercialComponents(catalogue, offer, sel.market)) {
+    if (c.treatment === "included") {
+      lines.push({
+        id: `aura-${c.id}`,
+        productId: c.id,
+        kind: c.kind === "setup" ? "connector_setup" : "connector",
+        label: c.label,
+        quantity: 1,
+        unitAmount: 0,
+        recurring: false,
+        chargeClass: "included",
+      });
+      continue;
+    }
+    if (c.treatment === "quote_required") {
+      lines.push({
+        id: `aura-${c.id}`,
+        productId: c.id,
+        kind: c.kind === "professional_services" ? "service" : "connector",
+        label: c.label,
+        quantity: 1,
+        unitAmount: 0,
+        recurring: false,
+        quoteOnly: true,
+        chargeClass: "custom_quote",
+      });
+      continue;
+    }
+    if (c.treatment === "one_time") {
+      lines.push({
+        id: `aura-${c.id}`,
+        productId: c.id,
+        kind: "connector_setup",
+        label: c.label,
+        quantity: 1,
+        unitAmount: c.oneTime ?? 0,
+        recurring: false,
+        chargeClass: "additional_charge",
+      });
+      continue;
+    }
+    lines.push({
+      id: `aura-${c.id}`,
+      productId: c.id,
+      kind: c.kind === "aura" ? "plan" : "connector",
+      label: `${c.label} (${sel.cycle === "monthly" ? "monthly" : "annual"})`,
+      quantity: 1,
+      unitAmount: (sel.cycle === "monthly" ? c.monthly : c.annual) ?? 0,
+      recurring: true,
+      chargeClass: "add_on",
+    });
+  }
 
   for (const [id, qty] of Object.entries(sel.addonQty)) {
     if (!qty) continue;
     const a = catalogue.addOns.find((x) => x.id === id);
     if (!a || !offer.enabledAddOnIds.includes(id)) continue;
     const addonRule = findPrice(catalogue, id, sel.market);
-    const addonAmount = sel.cycle === "monthly" ? addonRule?.monthly : addonRule?.annual;
+    // Recurring add-ons follow the billing cycle; one-time add-ons never do.
+    const addonAmount = !a.recurring
+      ? addonRule?.monthly
+      : sel.cycle === "monthly"
+        ? addonRule?.monthly
+        : addonRule?.annual;
     lines.push({
       id: `aura-addon-${id}`,
       productId: id,

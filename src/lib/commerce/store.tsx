@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { AURA_OFFERS, seedState } from "./seed";
+import { auraOfferComponents } from "./aura";
 import { validateCatalogue, type Issue } from "./validation";
 import type { Catalogue, CommerceState, TenantSubscription } from "./types";
 
@@ -48,9 +49,12 @@ function migrateV1(raw: string, base: CommerceState): CommerceState | null {
  * offers existed: fill in the new commercial fields without discarding data.
  */
 function normaliseCatalogue(c: Catalogue): Catalogue {
+  const offers = Array.isArray(c.auraOffers) ? c.auraOffers : AURA_OFFERS;
   return {
     ...c,
-    auraOffers: Array.isArray(c.auraOffers) ? c.auraOffers : AURA_OFFERS,
+    // Offers stored before explicit commercial components get the implicit
+    // single Aura recurring charge, so nothing loses its commercial meaning.
+    auraOffers: offers.map((o) => ({ ...o, components: auraOfferComponents(o) })),
     connectors: (c.connectors ?? []).map((conn) => ({
       ...conn,
       standaloneAuraOffering: Boolean(conn.standaloneAuraOffering),

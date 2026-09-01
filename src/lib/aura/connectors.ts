@@ -5,8 +5,10 @@
 import { SAMPLE_QUESTIONS, answerTallyQuestion, DEMO_COMPANY, type DemoAnswer, type DemoQuestion } from "./tally-demo";
 
 export interface AuraConnectorConfig {
-  /** Pricing/offer key, also the URL segment. */
+  /** URL segment for /aura/<id>. */
   id: string;
+  /** Connector id in the published commercial catalogue (authoritative source). */
+  catalogueConnectorId: string;
   name: string;
   /** Short phrase for "Your business runs on X". */
   systemNoun: string;
@@ -19,6 +21,7 @@ export interface AuraConnectorConfig {
 
 export const TALLY_CONNECTOR: AuraConnectorConfig = {
   id: "tally",
+  catalogueConnectorId: "conn.tally",
   name: "Tally",
   systemNoun: "Tally",
   heroSupporting:

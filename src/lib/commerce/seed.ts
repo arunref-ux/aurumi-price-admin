@@ -365,6 +365,34 @@ export const AURA_OFFERS: AuraOffer[] = [
     includedIntelligence: 5000,
     includedStorageGb: 25,
     enabledAddOnIds: ["addon.users", "addon.intelligence", "addon.storage"],
+    // Explicit commercial treatment: Aura recurring, Tally connection and
+    // setup included in the offer price. No one-time and no quoted component.
+    components: [
+      {
+        id: "aura.tally:aura",
+        label: "Aura",
+        kind: "aura",
+        treatment: "recurring",
+        productId: "aura.tally",
+        required: true,
+      },
+      {
+        id: "aura.tally:connector",
+        label: "Tally connection",
+        kind: "connector",
+        treatment: "included",
+        note: "No separate Workspace connector fee applies.",
+        required: true,
+      },
+      {
+        id: "aura.tally:setup",
+        label: "Setup",
+        kind: "setup",
+        treatment: "included",
+        note: "Aurumi-assisted Tally bridge setup is included in the offer price.",
+        required: true,
+      },
+    ],
     connectorCommercialTerms:
       "Tally bridge setup is Aurumi-assisted and included in the offer price; no separate Workspace connector fee applies.",
     professionalServicesRequired: false,

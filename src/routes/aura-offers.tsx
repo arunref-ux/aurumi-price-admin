@@ -13,7 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCommerce } from "@/lib/commerce/store";
 import { findPrice, formatMoney } from "@/lib/commerce/pricing";
-import type { AuraOffer, Catalogue, MarketId, PriceRule } from "@/lib/commerce/types";
+import type {
+  AuraOffer,
+  AuraOfferComponent,
+  Catalogue,
+  MarketId,
+  PriceRule,
+} from "@/lib/commerce/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/aura-offers")({
@@ -269,6 +275,64 @@ function AuraOffersPage() {
                   value={offer.includedStorageGb}
                   onChange={(v) => patch(offer.id, { includedStorageGb: v }, `${offer.name} included storage = ${v}`)}
                 />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Commercial components</CardTitle>
+                <CardDescription>
+                  Each component is treated explicitly: recurring, one-time, included or quote
+                  required. Any required quote component sends the configuration to Quote required
+                  instead of simulated payment.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {(offer.components ?? []).map((c, i) => (
+                  <div
+                    key={c.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="text-sm font-medium">{c.label}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {c.kind}
+                        {c.productId ? ` · priced as ${c.productId}` : ""}
+                        {c.note ? ` · ${c.note}` : ""}
+                      </span>
+                    </span>
+                    <Select
+                      value={c.treatment}
+                      onValueChange={(v) =>
+                        patch(
+                          offer.id,
+                          {
+                            components: (offer.components ?? []).map((x, xi) =>
+                              xi === i ? { ...x, treatment: v as AuraOfferComponent["treatment"] } : x,
+                            ),
+                          },
+                          `${offer.name} · ${c.label} treatment = ${v}`,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-52">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="recurring">Recurring</SelectItem>
+                        <SelectItem value="one_time">One-time / setup</SelectItem>
+                        <SelectItem value="included">Included</SelectItem>
+                        <SelectItem value="quote_required">Quote required</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+                {(offer.components ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No explicit components configured — the offer price is treated as a single Aura
+                    recurring charge.
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
 

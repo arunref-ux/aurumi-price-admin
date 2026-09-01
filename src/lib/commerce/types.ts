@@ -132,6 +132,36 @@ export interface Connector {
 
 
 /**
+ * How one commercial component of an offer is treated. Explicit, so different
+ * connectors can have different economics without encoding it in prose.
+ */
+export type AuraCommercialTreatment = "recurring" | "one_time" | "included" | "quote_required";
+
+export type AuraComponentKind =
+  | "aura"
+  | "connector"
+  | "setup"
+  | "professional_services"
+  | "other";
+
+/**
+ * One commercial component of a standalone Aura offer (Aura base charge,
+ * connector charge, setup, professional services, ...). Priced components refer
+ * to the shared PriceRule table through `productId`.
+ */
+export interface AuraOfferComponent {
+  id: string;
+  label: string;
+  kind: AuraComponentKind;
+  treatment: AuraCommercialTreatment;
+  /** PriceRule productId — required for "recurring" and "one_time" components. */
+  productId?: string;
+  note?: string;
+  /** A required quote component forces DRAFT -> QUOTE REQUIRED. */
+  required: boolean;
+}
+
+/**
  * A standalone Aura offering: the Aura capability (TTYB) sold together with one
  * business-context connector, without an Aurumi Workspace plan. Prices live in
  * the shared PriceRule table under `productId === offer.id`.
@@ -150,6 +180,8 @@ export interface AuraOffer {
   includedStorageGb: number | null;
   /** Only these add-ons may be sold with this offer. */
   enabledAddOnIds: string[];
+  /** Explicit commercial components: recurring / one-time / included / quoted. */
+  components: AuraOfferComponent[];
   /** Connector-specific commercial terms that apply to this offer. */
   connectorCommercialTerms: string;
   professionalServicesRequired: boolean;
