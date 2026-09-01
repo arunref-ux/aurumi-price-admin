@@ -608,3 +608,30 @@ CREATE TABLE catalogue_change_log (
 Users, roles, RBAC, usage metering, tenant health, and demo datasets
 (`tally-demo`, `quickbooks-demo`, `finance-demo`) are presentation/other-suite
 concerns and have no tables here.
+
+## 12. Audit notes (second pass against the code)
+
+Verified table-by-table against every declared interface. Findings folded in:
+
+- `TenantSubscription.entitlements` **is** persisted in the app (a snapshot), so
+  `subscription_entitlement` exists alongside the derived view — earlier drafts of this
+  schema wrongly treated it as purely derived.
+- `AddOn.entitlement` is a **single embedded** entitlement, not an array → inlined as
+  `ent_*` columns rather than a child table. `AurumiApp.entitlements` **is** an array →
+  child table `app_entitlement`.
+- `Market.id` is itself the enum (`IN/SG/AE/US/INTL`), so market rows are catalogue-scoped
+  with `(catalogue_id, id)` and no surrogate key.
+- `Promotion.id` (`promo.*`) and `Promotion.code` (`AURUMI20`) are distinct;
+  `tenant_subscription.promotion_code` references the **code**, matching the model.
+- One-time prices are stored on the same `price_rule` row via `monthly`, keyed by the
+  `:setup` / `:setup-us` product-id convention (`validation.ts` strips `/:setup$/`).
+- `BundleOffer.appIds` is declared but unused in seed data — `bundle_app` is retained
+  because the model declares it.
+- `Money` in `types.ts` is declared but referenced nowhere → intentionally no table.
+- `CommerceState.changeLog` is capped at 50 entries in the prototype; the SQL table has
+  no cap (retention is a policy, not a schema, concern).
+- Aura/Bundle `offer.ts` types (`AuraOfferView`, `BundleQuote`, `*PurchaseIntent`, demo
+  datasets) are **computed view models**, never persisted → no tables.
+- localStorage keys `aurumi.commerce.v2` (current) / `v1` (legacy migration source) map to
+  the `catalogue` + `tenant*` + `catalogue_change_log` trees above; `lastPublishedAt`
+  becomes `catalogue.published_at` on the latest published row.
