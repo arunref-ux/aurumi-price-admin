@@ -348,7 +348,12 @@ function TenantsPage() {
                 <CardDescription>Commercial allowance, not user access.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1.5 text-sm">
-                {summariseEntitlements(sub.entitlements).map((e) => (
+                {summariseEntitlements([
+                  ...sub.entitlements,
+                  ...(sub.bundleAdditions ?? [])
+                    .filter((a) => a.status === "active")
+                    .flatMap((a) => bundleAdditionEntitlements(published, a)),
+                ]).map((e) => (
                   <div key={e.key} className="flex justify-between gap-3">
                     <span>{ENTITLEMENT_LABELS[e.key] ?? e.key}</span>
                     <span className="tabular text-right text-muted-foreground">
