@@ -102,7 +102,7 @@ function BundlesPage() {
                       <Label htmlFor={`active-${b.id}`}>Active</Label>
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <Link to="/bundles/$slug" params={{ slug: b.slug }}>
+                      <Link to="/bundles/finance-cash-flow">
                         View landing page
                       </Link>
                     </Button>
