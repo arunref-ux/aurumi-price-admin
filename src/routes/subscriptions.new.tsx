@@ -22,6 +22,7 @@ import {
 } from "@/lib/commerce/validation";
 import { deriveEntitlements, ENTITLEMENT_LABELS, summariseEntitlements } from "@/lib/commerce/entitlements";
 import type { BillingCycle, MarketId, TenantSubscription } from "@/lib/commerce/types";
+import { AuraSubscriptionBuilder } from "@/components/admin/AuraSubscriptionBuilder";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/subscriptions/new")({
@@ -40,9 +41,71 @@ export const Route = createFileRoute("/subscriptions/new")({
   component: BuilderPage,
 });
 
+type ProductLine = "workspace" | "aura";
+
+/**
+ * Two commercial starting points: an Aurumi Workspace plan, or a standalone
+ * Aura offering (Aura + connector) which requires no Workspace plan at all.
+ */
+function BuilderPage() {
+  const [productLine, setProductLine] = useState<ProductLine>("workspace");
+  return (
+    <AdminLayout>
+      <PageHeader
+        title="Tenant Subscription Builder"
+        description="Commercial configuration answers “what can Aurumi sell?”. This answers “what has this tenant purchased?”. Prices are read from the published catalogue only; user- and role-level access is handled in Tenant Administration."
+      />
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <StartingPoint
+          selected={productLine === "workspace"}
+          onSelect={() => setProductLine("workspace")}
+          title="Aurumi Workspace"
+          body="Start from a Workspace plan (Starter, Growth, Business, Enterprise), then add apps, connectors and add-ons."
+        />
+        <StartingPoint
+          selected={productLine === "aura"}
+          onSelect={() => setProductLine("aura")}
+          title="Standalone Aura"
+          body="Start from a published Aura + connector offer. No Workspace plan is selected — that absence is intentional."
+        />
+      </div>
+      {productLine === "workspace" ? <WorkspaceBuilder /> : <AuraSubscriptionBuilder />}
+    </AdminLayout>
+  );
+}
+
+function StartingPoint({
+  selected,
+  onSelect,
+  title,
+  body,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  body: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={`rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        selected ? "border-accent bg-secondary" : "hover:bg-secondary/50"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-display font-semibold">{title}</span>
+        {selected ? <Badge>Selected</Badge> : null}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{body}</p>
+    </button>
+  );
+}
+
 const STEPS = ["Tenant", "Plan", "Entitlements", "Premium Apps", "Connectors", "Capacity", "Review"] as const;
 
-function BuilderPage() {
+function WorkspaceBuilder() {
   const { published, state, saveSubscription } = useCommerce();
   const catalogue = published;
   const navigate = useNavigate();
@@ -137,7 +200,9 @@ function BuilderPage() {
     const sub: TenantSubscription = {
       id: `sub.${Math.random().toString(36).slice(2, 9)}`,
       tenantId: tenant.id,
+      productLine: "workspace",
       planId: plan.id,
+      auraOfferId: null,
       market,
       currency: marketRow.currency,
       billingCycle: cycle,
@@ -189,12 +254,7 @@ function BuilderPage() {
   };
 
   return (
-    <AdminLayout>
-      <PageHeader
-        title="Tenant Subscription Builder"
-        description="Commercial configuration answers “what can Aurumi sell?”. This answers “what has this tenant purchased?”. Prices are read from the published catalogue only; user- and role-level access is handled in Tenant Administration."
-      />
-
+    <>
       <div className="mb-4 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {STEPS.map((s, i) => (
           <Button
@@ -701,7 +761,7 @@ function BuilderPage() {
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 }
 
