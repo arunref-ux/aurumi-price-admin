@@ -451,6 +451,62 @@ export function validateCatalogue(catalogue: Catalogue): Issue[] {
     }
   }
 
+  // Standalone Aura offers must be commercially coherent before publishing.
+  for (const o of catalogue.auraOffers ?? []) {
+    if (!o.active) continue;
+    const connector = catalogue.connectors.find((c) => c.id === o.connectorId);
+    if (!connector) {
+      issues.push({
+        id: `aura.connector:${o.id}`,
+        severity: "error",
+        message: `${o.name} refers to a connector that does not exist`,
+        reason: "Select an existing connector for this standalone Aura offer.",
+      });
+      continue;
+    }
+    if (!connector.standaloneAuraOffering) {
+      issues.push({
+        id: `aura.standalone:${o.id}`,
+        severity: "error",
+        message: `${connector.name} is not enabled as a standalone Aura offering`,
+        reason:
+          "The connector works with Aura, but it may not be sold directly with Aura until Standalone Aura Offering is set to Yes.",
+      });
+    }
+    if (o.status === "Available") {
+      for (const market of o.eligibleMarkets) {
+        const rule = findPrice(catalogue, o.id, market);
+        if (!rule) {
+          issues.push({
+            id: `aura.norule:${o.id}:${market}`,
+            severity: "error",
+            message: `${o.name} has no price row for ${market}`,
+            reason: "An offer sold in a market needs a pricing rule in that market.",
+          });
+          continue;
+        }
+        if (!o.quoteOnly && !rule.quoteOnly && (rule.monthly === null || rule.annual === null)) {
+          issues.push({
+            id: `aura.emptyprice:${o.id}:${market}`,
+            severity: "error",
+            message: `${o.name} has an incomplete price in ${market}`,
+            reason: "Both monthly and annual amounts are required unless the offer is quote-only.",
+          });
+        }
+      }
+    }
+    for (const id of o.enabledAddOnIds) {
+      if (!catalogue.addOns.some((a) => a.id === id)) {
+        issues.push({
+          id: `aura.addon:${o.id}:${id}`,
+          severity: "warning",
+          message: `${o.name} enables an add-on that no longer exists (${id})`,
+          reason: "Remove it from the offer configuration.",
+        });
+      }
+    }
+  }
+
   // Price integrity: amounts must be finite and non-negative.
   for (const r of catalogue.prices) {
     const bad = ([["monthly", r.monthly], ["annual", r.annual]] as const).filter(

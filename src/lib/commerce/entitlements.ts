@@ -119,6 +119,8 @@ export function summariseEntitlements(entitlements: Entitlement[]): EntitlementS
 }
 
 export const ENTITLEMENT_LABELS: Record<string, string> = {
+  "aura.capability": "Aura (Talk to Your Business)",
+  "aura.connector": "Business context connector",
   "users.included": "Users",
   "apps.standard.all": "Standard Apps",
   "apps.premium": "Premium Apps",
