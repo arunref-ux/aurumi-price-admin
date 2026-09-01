@@ -408,6 +408,93 @@ const AURA_OFFER_USD: Record<string, number | null> = {
   "aura.tally": 29,
 };
 
+/**
+ * Bundles — curated multi-connector commercial offers. The bundle references
+ * existing connector records; it never duplicates or reclassifies them.
+ */
+export const BUNDLES: BundleOffer[] = [
+  {
+    id: "bundle.finance-cash-flow",
+    slug: "finance-cash-flow",
+    name: "Finance & Cash Flow Bundle",
+    positioning: "Know your numbers. Improve cash flow.",
+    description:
+      "A curated combination of finance and business connectors that gives Aura / Talk to Your Business a connected view of financial activity.",
+    connectorIds: ["conn.quickbooks", "conn.tally", "conn.razorpay", "conn.gsheets"],
+    appIds: [],
+    enabledAddOnIds: ["addon.users", "addon.intelligence", "addon.storage"],
+    eligibleMarkets: ALL_MARKET_IDS,
+    includedUsers: 10,
+    includedIntelligence: 15000,
+    includedStorageGb: 100,
+    // The bundle itself carries the recurring charge; the packaged connectors
+    // are included components, not independently payable lines.
+    components: [
+      {
+        id: "bundle.finance-cash-flow:bundle",
+        label: "Finance & Cash Flow Bundle (incl. Aura / Talk to Your Business)",
+        kind: "bundle",
+        treatment: "recurring",
+        productId: "bundle.finance-cash-flow",
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:conn.quickbooks",
+        label: "QuickBooks connection",
+        kind: "connector",
+        treatment: "included",
+        connectorId: "conn.quickbooks",
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:conn.tally",
+        label: "Tally connection",
+        kind: "connector",
+        treatment: "included",
+        connectorId: "conn.tally",
+        note: "Tally bridge setup is Aurumi-assisted and included in the bundle price.",
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:conn.razorpay",
+        label: "Razorpay connection",
+        kind: "connector",
+        treatment: "included",
+        connectorId: "conn.razorpay",
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:conn.gsheets",
+        label: "Google Sheets connection",
+        kind: "connector",
+        treatment: "included",
+        connectorId: "conn.gsheets",
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:setup",
+        label: "Setup",
+        kind: "setup",
+        treatment: "included",
+        note: "Guided setup of all four connections is included in the bundle price.",
+        required: true,
+      },
+    ],
+    commercialTerms:
+      "The bundle is the commercial package: one recurring charge covers Aura and all four included connections. No separate Workspace connector fees apply while the bundle is active.",
+    status: "Available",
+    quoteOnly: false,
+    active: true,
+  },
+];
+
+/** Bundle price is set commercially — not the sum of its connector prices. */
+const BUNDLE_USD: Record<string, number | null> = {
+  "bundle.finance-cash-flow": 79,
+};
+
+
+
 const PLAN_USD: Record<string, number | null> = Object.fromEntries(PLAN_DEFS.map((p) => [p.id, p.usd]));
 
 function round(value: number, currency: string) {
