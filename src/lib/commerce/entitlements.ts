@@ -1,4 +1,4 @@
-import type { AddOn, Catalogue, Entitlement, Plan, TenantSubscription } from "./types";
+import type { AddOn, Catalogue, Entitlement, Plan, TenantSubscription, WorkspaceBundleAddition } from "./types";
 
 /**
  * PLAN -> ENTITLEMENTS.
@@ -133,3 +133,41 @@ export const ENTITLEMENT_LABELS: Record<string, string> = {
   "governance.advanced": "Governance",
   sla: "SLA",
 };
+
+/**
+ * BUNDLE ADDITION -> TENANT-LEVEL ENTITLEMENTS.
+ * Derived from the PUBLISHED bundle offer only; nothing user- or role-level.
+ */
+export function bundleAdditionEntitlements(
+  catalogue: Catalogue,
+  addition: WorkspaceBundleAddition,
+): Entitlement[] {
+  const bundle = (catalogue.bundles ?? []).find((b) => b.id === addition.bundleId);
+  if (!bundle) return [];
+  const out: Entitlement[] = [
+    { key: "aura.capability", label: `${bundle.name} — Talk to Your Business`, source: bundle.id },
+  ];
+  for (const id of bundle.connectorIds) {
+    const c = catalogue.connectors.find((x) => x.id === id);
+    if (c) out.push({ key: "aura.connector", label: c.name, source: bundle.id });
+  }
+  if (bundle.includedUsers !== null) {
+    out.push({ key: "users.included", value: bundle.includedUsers, unit: "users", source: bundle.id });
+  }
+  if (bundle.includedIntelligence !== null) {
+    out.push({
+      key: "capacity.intelligence",
+      value: bundle.includedIntelligence,
+      unit: "AIC/mo",
+      source: bundle.id,
+    });
+  }
+  if (bundle.includedStorageGb !== null) {
+    out.push({ key: "capacity.storage", value: bundle.includedStorageGb, unit: "GB", source: bundle.id });
+  }
+  for (const a of addition.addOns) {
+    const def = catalogue.addOns.find((x) => x.id === a.id);
+    if (def) out.push({ key: def.entitlement.key, value: a.units, unit: def.entitlement.unit, source: bundle.id });
+  }
+  return out;
+}
