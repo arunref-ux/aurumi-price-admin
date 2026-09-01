@@ -165,8 +165,10 @@ export function BundleProductPage({ config }: { config: BundlePageConfig }) {
 
             <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/30 p-6">
               <p className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-accent">
-                One bundle, four systems
+                One bundle
+                {offer?.connectors.length ? `, ${offer.connectors.length} connected systems` : ""}
               </p>
+
               <ul className="mt-4 space-y-3 text-sm text-sidebar-foreground/85">
                 {(offer?.connectors ?? []).map((c) => (
                   <li key={c.id} className="flex gap-2.5">
