@@ -167,7 +167,14 @@ export function bundleAdditionEntitlements(
   }
   for (const a of addition.addOns) {
     const def = catalogue.addOns.find((x) => x.id === a.id);
-    if (def) out.push({ key: def.entitlement.key, value: a.units, unit: def.entitlement.unit, source: bundle.id });
+    if (def) {
+      out.push({
+        key: def.entitlement.key,
+        value: a.units,
+        ...(def.entitlement.unit ? { unit: def.entitlement.unit } : {}),
+        source: bundle.id,
+      });
+    }
   }
   return out;
 }
