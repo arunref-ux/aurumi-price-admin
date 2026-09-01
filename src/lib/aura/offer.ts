@@ -73,8 +73,16 @@ interface MarketPricing {
   addOnUnitAmounts: Record<string, number>;
 }
 
-/** Simulated commercial configuration layer (stands in for Price Admin data). */
+/** Per-connector simulated commercial configuration (stands in for Price Admin data). */
+interface ConnectorOfferConfig {
+  connectorName: string;
+  included: AuraIncludedEntitlements;
+  addOns: Omit<AuraAddOn, "unitAmount">[];
+  pricing: Record<AuraMarketId, MarketPricing>;
+}
+
 const AURA_TALLY_PRICING: Record<AuraMarketId, MarketPricing> = {
+
   IN: {
     currency: "INR",
     monthlyPrice: 4999,
@@ -154,34 +162,63 @@ const AURA_TALLY_ADDONS: Omit<AuraAddOn, "unitAmount">[] = [
   },
 ];
 
+/**
+ * Connector-keyed offer registry. Each supported Aura + Connector product has
+ * its own complete commercial configuration — pricing, included entitlements
+ * and add-ons — so one connector can never inherit another's commercial data.
+ * Only "tally" is implemented in Phase 1.
+ */
+const AURA_OFFERS: Record<string, ConnectorOfferConfig> = {
+  tally: {
+    connectorName: "Tally",
+    included: AURA_TALLY_INCLUDED,
+    addOns: AURA_TALLY_ADDONS,
+    pricing: AURA_TALLY_PRICING,
+  },
+};
+
 export interface GetAuraOfferInput {
   connector: string;
   market: AuraMarketId;
 }
 
-/** Simulated pricing call. Deterministic, local, and provider-agnostic. */
-export function getAuraOffer({ connector, market }: GetAuraOfferInput): AuraOffer {
-  const pricing = AURA_TALLY_PRICING[market] ?? AURA_TALLY_PRICING.INTL;
+/** Explicit result — an unsupported connector is never silently mapped to another offer. */
+export type AuraOfferResult =
+  | { available: true; offer: AuraOffer }
+  | { available: false; connector: string; market: AuraMarketId };
+
+/** Simulated pricing call, keyed by connector AND market. Deterministic and local. */
+export function getAuraOffer({ connector, market }: GetAuraOfferInput): AuraOfferResult {
+  const config = AURA_OFFERS[connector];
+  if (!config) return { available: false, connector, market };
+
+  const pricing = config.pricing[market];
+  if (!pricing) return { available: false, connector, market };
+
   const marketOption = AURA_MARKETS.find((m) => m.id === market) ?? AURA_MARKETS[4]!;
-  const connectorName = connector.charAt(0).toUpperCase() + connector.slice(1);
 
   return {
-    product: "Aura",
-    productTagline: "Talk to Your Business",
-    connector,
-    connectorName: connector === "tally" ? "Tally" : connectorName,
-    market,
-    marketName: marketOption.name,
-    currency: pricing.currency,
-    monthlyPrice: pricing.monthlyPrice,
-    annualPrice: pricing.annualPrice,
-    included: AURA_TALLY_INCLUDED,
-    additionalConnectorMonthly: pricing.additionalConnectorMonthly,
-    addOns: AURA_TALLY_ADDONS.map((a) => ({
-      ...a,
-      unitAmount: pricing.addOnUnitAmounts[a.id] ?? 0,
-    })).filter((a) => a.enabled),
-    taxNote: pricing.taxNote,
+    available: true,
+    offer: {
+      product: "Aura",
+      productTagline: "Talk to Your Business",
+      connector,
+      connectorName: config.connectorName,
+      market,
+      marketName: marketOption.name,
+      currency: pricing.currency,
+      monthlyPrice: pricing.monthlyPrice,
+      annualPrice: pricing.annualPrice,
+      included: config.included,
+      additionalConnectorMonthly: pricing.additionalConnectorMonthly,
+      addOns: config.addOns
+        .map((a) => ({
+          ...a,
+          unitAmount: pricing.addOnUnitAmounts[a.id] ?? 0,
+        }))
+        .filter((a) => a.enabled),
+      taxNote: pricing.taxNote,
+    },
   };
 }
 

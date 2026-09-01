@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -22,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
+
 import type { AuraConnectorConfig } from "@/lib/aura/connectors";
 import type { DemoAnswer } from "@/lib/aura/tally-demo";
 import {
@@ -33,6 +34,7 @@ import {
   getAuraOffer,
   type AuraBillingCycle,
   type AuraMarketId,
+  type AuraPurchaseIntent,
 } from "@/lib/aura/offer";
 
 interface Turn {
@@ -51,8 +53,17 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
   const [cycle, setCycle] = useState<AuraBillingCycle>("monthly");
   const [addOnQty, setAddOnQty] = useState<Record<string, number>>({});
 
-  const offer = useMemo(() => getAuraOffer({ connector: connector.id, market }), [connector.id, market]);
-  const quote = useMemo(() => calculateAuraQuote(offer, cycle, addOnQty), [offer, cycle, addOnQty]);
+  const offerResult = useMemo(
+    () => getAuraOffer({ connector: connector.id, market }),
+    [connector.id, market],
+  );
+  const offer = offerResult.available ? offerResult.offer : null;
+  const quote = useMemo(
+    () => (offer ? calculateAuraQuote(offer, cycle, addOnQty) : null),
+    [offer, cycle, addOnQty],
+  );
+  const [purchaseIntent, setPurchaseIntent] = useState<AuraPurchaseIntent | null>(null);
+
 
   const ask = (question: string) => {
     const q = question.trim();
@@ -68,15 +79,14 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const purchase = () => {
+    if (!offer) return;
     const intent = buildPurchaseIntent(offer, cycle, addOnQty);
     // Simulated purchase flow — no payment provider, no card collection.
     console.info("[simulated purchase intent]", intent);
-    toast.success(`Simulated checkout started — Aura + ${offer.connectorName}`, {
-      description: `${offer.marketName} · ${cycle === "annual" ? "Annual" : "Monthly"} · ${formatOfferMoney(
-        quote.cycleTotal,
-        quote.currency,
-      )}${cycle === "annual" ? " billed annually" : " per month"}. No payment is taken in this demo.`,
-    });
+    setPurchaseIntent(intent);
+    window.setTimeout(() => {
+      document.getElementById("aura-purchase-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const setQty = (id: string, qty: number, max: number) =>
@@ -349,6 +359,17 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
             automatically.
           </p>
 
+          {!offer || !quote ? (
+            <Card className="mt-10 border-border/70">
+              <CardContent className="p-8 text-center">
+                <p className="font-display text-lg font-semibold">Offer not available</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Aura + {connector.name} is not currently offered in this market. Please choose another
+                  market or contact us.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
           <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <Card className="border-border/70">
               <CardContent className="p-6 sm:p-8">
@@ -417,8 +438,19 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                             <div className="min-w-0">
                               <p className="text-sm font-medium">{a.name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {a.description} {formatOfferMoney(a.unitAmount, offer.currency)} per{" "}
-                                {a.unitSize.toLocaleString()} {a.unit} / month.
+                                {a.description}{" "}
+                                {cycle === "annual" ? (
+                                  <>
+                                    {formatOfferMoney(a.unitAmount * 10, offer.currency)} per{" "}
+                                    {a.unitSize.toLocaleString()} {a.unit} / year (
+                                    {formatOfferMoney(a.unitAmount, offer.currency)} / month equivalent).
+                                  </>
+                                ) : (
+                                  <>
+                                    {formatOfferMoney(a.unitAmount, offer.currency)} per{" "}
+                                    {a.unitSize.toLocaleString()} {a.unit} / month.
+                                  </>
+                                )}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -491,8 +523,103 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
               </CardContent>
             </Card>
           </div>
+          )}
         </div>
       </section>
+
+      {/* Simulated purchase confirmation */}
+      {purchaseIntent ? (
+        <section id="aura-purchase-result" className="scroll-mt-6 border-t border-border bg-muted/40 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-5 sm:px-8">
+            <Card className="border-accent/40 shadow-sm">
+              <CardContent className="p-6 sm:p-8">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-accent text-accent-foreground">Simulated purchase</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Demo purchase — no payment has been made.
+                  </span>
+                </div>
+                <h2 className="mt-4 font-display text-2xl font-semibold sm:text-3xl">
+                  Your Aura + {connector.name} setup is ready
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This is a simulated signup for demonstration purposes. No real subscription has been
+                  created and no payment details were collected.
+                </p>
+
+                <Separator className="my-6" />
+
+                <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Product</dt>
+                    <dd className="font-medium sm:mt-0.5">
+                      Aura + {connector.name}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Market</dt>
+                    <dd className="font-medium sm:mt-0.5">
+                      {AURA_MARKETS.find((m) => m.id === purchaseIntent.market)?.name ?? purchaseIntent.market} (
+                      {purchaseIntent.currency})
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Billing cycle</dt>
+                    <dd className="font-medium sm:mt-0.5">
+                      {purchaseIntent.cycle === "annual" ? "Annual" : "Monthly"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">
+                      {purchaseIntent.cycle === "annual" ? "Recurring (billed annually)" : "Recurring (per month)"}
+                    </dt>
+                    <dd className="font-medium tabular sm:mt-0.5">
+                      {formatOfferMoney(purchaseIntent.quote.cycleTotal, purchaseIntent.currency)}
+                      {purchaseIntent.cycle === "annual"
+                        ? ` / year (${formatOfferMoney(purchaseIntent.quote.monthlyEquivalent, purchaseIntent.currency)} / month equivalent)`
+                        : " / month"}
+                    </dd>
+                  </div>
+                </dl>
+
+                {purchaseIntent.addOns.length > 0 ? (
+                  <>
+                    <Separator className="my-6" />
+                    <h3 className="font-display text-sm font-semibold uppercase tracking-wide">
+                      Selected add-ons
+                    </h3>
+                    <ul className="mt-3 space-y-2 text-sm">
+                      {purchaseIntent.addOns.map((a) => {
+                        const line = purchaseIntent.quote.lines.find((l) => l.id === a.id);
+                        return (
+                          <li key={a.id} className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground">
+                              {line?.label ?? a.id}
+                            </span>
+                            <span className="tabular">
+                              {line ? formatOfferMoney(line.amount, purchaseIntent.currency) : "—"}
+                              {purchaseIntent.cycle === "annual" ? " / year" : " / month"}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                ) : null}
+
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Button className="bg-accent text-accent-foreground hover:bg-accent/90" disabled>
+                    Start Setup (simulated)
+                  </Button>
+                  <Button variant="outline" onClick={() => setPurchaseIntent(null)}>
+                    Adjust configuration
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      ) : null}
 
       {/* Upgrade path */}
       <section className="border-t border-border bg-muted/30 py-12">
