@@ -411,6 +411,11 @@ const AURA_OFFER_USD: Record<string, number | null> = {
 /**
  * Bundles — curated multi-connector commercial offers. The bundle references
  * existing connector records; it never duplicates or reclassifies them.
+ *
+ * ILLUSTRATIVE CONFIGURATION: the amounts below are representative test values
+ * used to exercise the commercial framework (market availability, market
+ * composition, recurring and one-time treatments). They are not commercial
+ * price recommendations.
  */
 export const BUNDLES: BundleOffer[] = [
   {
@@ -420,13 +425,18 @@ export const BUNDLES: BundleOffer[] = [
     positioning: "Know your numbers. Improve cash flow.",
     description:
       "A curated combination of finance and business connectors that gives Aura / Talk to Your Business a connected view of financial activity.",
-    connectorIds: ["conn.quickbooks", "conn.tally", "conn.razorpay", "conn.gsheets"],
+    // Union of every connector the bundle can package; the market-specific
+    // composition is expressed on the components below.
+    connectorIds: ["conn.quickbooks", "conn.tally", "conn.razorpay", "conn.stripe", "conn.gsheets"],
     appIds: [],
-    enabledAddOnIds: ["addon.users", "addon.intelligence", "addon.storage"],
-    eligibleMarkets: ALL_MARKET_IDS,
+    // The bundle controls its own add-ons and inherits none.
+    enabledAddOnIds: [],
+    eligibleMarkets: ["IN", "US"],
     includedUsers: 10,
-    includedIntelligence: 15000,
-    includedStorageGb: 100,
+    // Consumption (intelligence, storage, transfer) stays a separate top-up
+    // dimension bought through the existing Aurumi mechanisms.
+    includedIntelligence: null,
+    includedStorageGb: null,
     // The bundle itself carries the recurring charge; the packaged connectors
     // are included components, not independently payable lines.
     components: [
@@ -439,19 +449,12 @@ export const BUNDLES: BundleOffer[] = [
         required: true,
       },
       {
-        id: "bundle.finance-cash-flow:conn.quickbooks",
-        label: "QuickBooks connection",
-        kind: "connector",
-        treatment: "included",
-        connectorId: "conn.quickbooks",
-        required: true,
-      },
-      {
         id: "bundle.finance-cash-flow:conn.tally",
         label: "Tally connection",
         kind: "connector",
         treatment: "included",
         connectorId: "conn.tally",
+        eligibleMarkets: ["IN"],
         note: "Tally bridge setup is Aurumi-assisted and included in the bundle price.",
         required: true,
       },
@@ -461,6 +464,25 @@ export const BUNDLES: BundleOffer[] = [
         kind: "connector",
         treatment: "included",
         connectorId: "conn.razorpay",
+        eligibleMarkets: ["IN"],
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:conn.quickbooks",
+        label: "QuickBooks connection",
+        kind: "connector",
+        treatment: "included",
+        connectorId: "conn.quickbooks",
+        eligibleMarkets: ["US"],
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:conn.stripe",
+        label: "Stripe connection",
+        kind: "connector",
+        treatment: "included",
+        connectorId: "conn.stripe",
+        eligibleMarkets: ["US"],
         required: true,
       },
       {
@@ -473,15 +495,26 @@ export const BUNDLES: BundleOffer[] = [
       },
       {
         id: "bundle.finance-cash-flow:setup",
-        label: "Setup",
+        label: "Setup & implementation",
         kind: "setup",
         treatment: "included",
-        note: "Guided setup of all four connections is included in the bundle price.",
+        eligibleMarkets: ["IN"],
+        note: "Guided setup of all included connections is part of the bundle price.",
+        required: true,
+      },
+      {
+        id: "bundle.finance-cash-flow:setup-us",
+        label: "Setup & implementation (one-time)",
+        kind: "setup",
+        treatment: "one_time",
+        productId: "bundle.finance-cash-flow:setup",
+        eligibleMarkets: ["US"],
+        note: "Charged once at purchase — never recurring.",
         required: true,
       },
     ],
     commercialTerms:
-      "The bundle is the commercial package: one recurring charge covers Aura and all four included connections. No separate Workspace connector fees apply while the bundle is active.",
+      "The bundle is the commercial package: one recurring charge covers Aura and the connections included in your market. Consumption (intelligence credits, storage and data transfer) is purchased separately using the existing Aurumi top-up mechanisms.",
     status: "Available",
     quoteOnly: false,
     availableDirectlyWithAura: true,
@@ -490,10 +523,38 @@ export const BUNDLES: BundleOffer[] = [
   },
 ];
 
-/** Bundle price is set commercially — not the sum of its connector prices. */
-const BUNDLE_USD: Record<string, number | null> = {
-  "bundle.finance-cash-flow": 79,
-};
+/**
+ * Illustrative bundle price rules. Only markets where the bundle is offered
+ * carry a price rule — unavailable markets get no incomplete offer.
+ */
+function bundlePriceRow(
+  productId: string,
+  market: Market["id"],
+  monthly: number | null,
+  annual: number | null,
+  annualDiscountPct = 0,
+): PriceRule {
+  const m = MARKETS.find((x) => x.id === market)!;
+  return {
+    productId,
+    market,
+    currency: m.currency,
+    monthly,
+    annual,
+    annualDiscountPct,
+    taxIncluded: m.taxIncluded,
+    quoteOnly: false,
+  };
+}
+
+export const BUNDLE_PRICES: PriceRule[] = [
+  // India — ₹999 / month, ₹9,990 / year. Setup included (no price rule).
+  bundlePriceRow("bundle.finance-cash-flow", "IN", 999, 9990, 17),
+  // United States — $29 / month, $290 / year, plus a $49 one-time setup.
+  bundlePriceRow("bundle.finance-cash-flow", "US", 29, 290, 17),
+  bundlePriceRow("bundle.finance-cash-flow:setup", "US", 49, 49, 0),
+];
+
 
 
 
@@ -534,7 +595,7 @@ export const PRICES: PriceRule[] = [
   }),
   ...ADDONS.flatMap((a) => priceRows(a.id, ADDON_USD[a.id] ?? null, 15)),
   ...AURA_OFFERS.flatMap((o) => priceRows(o.id, AURA_OFFER_USD[o.id] ?? null, 20, o.quoteOnly)),
-  ...BUNDLES.flatMap((b) => priceRows(b.id, BUNDLE_USD[b.id] ?? null, 20, b.quoteOnly)),
+  ...BUNDLE_PRICES,
 ];
 
 export const PROMOTIONS: Promotion[] = [

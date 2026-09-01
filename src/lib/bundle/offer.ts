@@ -11,6 +11,7 @@
 import { findPrice } from "@/lib/commerce/pricing";
 import {
   bundleCommercialComponents,
+  bundleConnectorIdsForMarket,
   bundleEligibility,
   bundleQuoteReasons,
   findBundle,
@@ -140,7 +141,7 @@ export function getBundleOffer({
   const quoteReasons = bundleQuoteReasons(resolved);
   const eligibility = bundleEligibility(published);
 
-  const connectors: BundleConnectorView[] = published.connectorIds
+  const connectors: BundleConnectorView[] = bundleConnectorIdsForMarket(published, market)
     .map((id): BundleConnectorView | null => {
       const c = catalogue.connectors.find((x) => x.id === id);
       if (!c) return null;

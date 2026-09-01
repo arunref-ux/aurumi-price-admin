@@ -1,3 +1,4 @@
+import { bundleConnectorIdsForMarket } from "./bundles";
 import type { AddOn, Catalogue, Entitlement, Plan, TenantSubscription, WorkspaceBundleAddition } from "./types";
 
 /**
@@ -147,7 +148,7 @@ export function bundleAdditionEntitlements(
   const out: Entitlement[] = [
     { key: "aura.capability", label: `${bundle.name} — Talk to Your Business`, source: bundle.id },
   ];
-  for (const id of bundle.connectorIds) {
+  for (const id of bundleConnectorIdsForMarket(bundle, addition.market)) {
     const c = catalogue.connectors.find((x) => x.id === id);
     if (c) out.push({ key: "aura.connector", label: c.name, source: bundle.id });
   }

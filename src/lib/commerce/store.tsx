@@ -60,21 +60,40 @@ function normaliseCatalogue(c: Catalogue, scope: "draft" | "published"): Catalog
   // Seeded bundles may only enter the DRAFT catalogue. Normalisation must never
   // make a new commercial product customer-facing without an explicit publish.
   const storedBundles = Array.isArray(c.bundles) ? c.bundles : [];
-  const bundles =
+  let bundles =
     storedBundles.length || scope === "published" ? storedBundles : BUNDLES;
+  // Prototype migration: a DRAFT bundle stored before market-specific
+  // composition existed is refreshed from the seed configuration. Published
+  // catalogues are never rewritten — publishing stays an explicit action.
+  const refreshedBundleIds = new Set<string>();
+  if (scope === "draft") {
+    bundles = bundles.map((b) => {
+      const seed = BUNDLES.find((s) => s.id === b.id);
+      const hasMarketScopedComponents = (b.components ?? []).some(
+        (comp) => (comp.eligibleMarkets ?? []).length > 0,
+      );
+      if (!seed || hasMarketScopedComponents) return b;
+      refreshedBundleIds.add(b.id);
+      return seed;
+    });
+  }
   const connectors = Array.isArray(c.connectors) ? c.connectors : [];
   // Connectors and prices a bundle references must exist, even in catalogues
   // stored before bundles were introduced.
   const missingConnectors = SEED_CONNECTORS.filter(
     (sc) => !connectors.some((cc) => cc.id === sc.id),
   );
-  const prices = Array.isArray(c.prices) ? c.prices : [];
+  const storedPrices = Array.isArray(c.prices) ? c.prices : [];
+  const prices = storedPrices.filter(
+    (p) => ![...refreshedBundleIds].some((id) => p.productId.startsWith(id)),
+  );
   const missingPrices = SEED_PRICES.filter(
     (sp) =>
       !prices.some((p) => p.productId === sp.productId && p.market === sp.market) &&
       ((scope === "draft" && sp.productId.startsWith("bundle.")) ||
         missingConnectors.some((mc) => sp.productId.startsWith(mc.id))),
   );
+
   return {
     ...c,
     // Offers stored before explicit commercial components get the implicit
