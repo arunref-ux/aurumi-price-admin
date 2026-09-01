@@ -77,7 +77,7 @@ interface MarketPricing {
 interface ConnectorOfferConfig {
   connectorName: string;
   included: AuraIncludedEntitlements;
-  addOns: Omit<AuraAddOn, "unitAmount" | "enabled">[] & { enabled: boolean }[];
+  addOns: Omit<AuraAddOn, "unitAmount">[];
   pricing: Record<AuraMarketId, MarketPricing>;
 }
 
