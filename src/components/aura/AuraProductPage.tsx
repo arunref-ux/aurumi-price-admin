@@ -26,8 +26,9 @@ import { Separator } from "@/components/ui/separator";
 
 import type { AuraConnectorConfig } from "@/lib/aura/connectors";
 import type { DemoAnswer } from "@/lib/aura/tally-demo";
+import { useCommerce } from "@/lib/commerce/store";
 import {
-  AURA_MARKETS,
+  auraMarketOptions,
   buildPurchaseIntent,
   calculateAuraQuote,
   formatOfferMoney,
@@ -47,15 +48,19 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
   const demoRef = useRef<HTMLDivElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
 
+  // Single commercial source: the PUBLISHED Price Admin catalogue.
+  const { published } = useCommerce();
+
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [market, setMarket] = useState<AuraMarketId>("IN");
   const [cycle, setCycle] = useState<AuraBillingCycle>("monthly");
   const [addOnQty, setAddOnQty] = useState<Record<string, number>>({});
 
+  const markets = useMemo(() => auraMarketOptions(published), [published]);
   const offerResult = useMemo(
-    () => getAuraOffer({ connector: connector.id, market }),
-    [connector.id, market],
+    () => getAuraOffer({ catalogue: published, connector: connector.catalogueConnectorId, market }),
+    [published, connector.catalogueConnectorId, market],
   );
   const offer = offerResult.available ? offerResult.offer : null;
   const quote = useMemo(
@@ -80,8 +85,9 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
 
   const purchase = () => {
     if (!offer) return;
-    const intent = buildPurchaseIntent(offer, cycle, addOnQty);
-    // Simulated purchase flow — no payment provider, no card collection.
+    const intent = buildPurchaseIntent(published, offer, cycle, addOnQty);
+    // Simulated flow — no payment provider, no card collection. A quote-required
+    // configuration never enters the simulated payment lifecycle.
     console.info("[simulated purchase intent]", intent);
     setPurchaseIntent(intent);
     window.setTimeout(() => {
@@ -339,7 +345,7 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {AURA_MARKETS.map((m) => (
+                  {markets.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.name}
                     </SelectItem>
@@ -374,27 +380,44 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
             <Card className="border-border/70">
               <CardContent className="p-6 sm:p-8">
                 <Badge variant="secondary">{offer.marketName}</Badge>
-                <div className="mt-4 flex flex-wrap items-baseline gap-2">
-                  <span className="font-display text-4xl font-semibold">
-                    {formatOfferMoney(
-                      cycle === "annual" ? Math.round(offer.annualPrice / 12) : offer.monthlyPrice,
-                      offer.currency,
-                    )}
-                  </span>
-                  <span className="text-muted-foreground">/ month</span>
-                  {cycle === "annual" ? (
-                    <span className="text-sm text-muted-foreground line-through">
-                      {formatOfferMoney(offer.monthlyPrice, offer.currency)}
-                    </span>
-                  ) : null}
-                </div>
-                {cycle === "annual" ? (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Billed {formatOfferMoney(offer.annualPrice, offer.currency)} annually · Save{" "}
-                    {Math.max(0, Math.round((1 - offer.annualPrice / (offer.monthlyPrice * 12)) * 100))}%
-                  </p>
+                {offer.quoteRequired ? (
+                  <div className="mt-4">
+                    <p className="font-display text-3xl font-semibold">Quote required</p>
+                    <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                      {offer.quoteReasons.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">Billed monthly. Cancel anytime.</p>
+                  <>
+                    <div className="mt-4 flex flex-wrap items-baseline gap-2">
+                      <span className="font-display text-4xl font-semibold">
+                        {formatOfferMoney(
+                          cycle === "annual"
+                            ? offer.annualPrice === null
+                              ? null
+                              : Math.round(offer.annualPrice / 12)
+                            : offer.monthlyPrice,
+                          offer.currency,
+                        )}
+                      </span>
+                      <span className="text-muted-foreground">/ month</span>
+                      {cycle === "annual" ? (
+                        <span className="text-sm text-muted-foreground line-through">
+                          {formatOfferMoney(offer.monthlyPrice, offer.currency)}
+                        </span>
+                      ) : null}
+                    </div>
+                    {cycle === "annual" ? (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Billed {formatOfferMoney(offer.annualPrice, offer.currency)} annually · Save{" "}
+                        {quote.annualSavingPct}%
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-sm text-muted-foreground">Billed monthly. Cancel anytime.</p>
+                    )}
+                  </>
                 )}
                 <p className="mt-1 text-xs text-muted-foreground">{offer.taxNote}</p>
 
@@ -403,23 +426,56 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                 <h3 className="font-display text-sm font-semibold uppercase tracking-wide">What's included</h3>
                 <ul className="mt-4 space-y-2 text-sm">
                   {[
-                    `${offer.included.users} users`,
-                    `${offer.included.intelligenceCredits.toLocaleString()} Intelligence Capacity credits / month`,
-                    `${offer.included.storageGb} GB storage & business context`,
+                    offer.included.users === null ? null : `${offer.included.users} users`,
+                    offer.included.intelligenceCredits === null
+                      ? null
+                      : `${offer.included.intelligenceCredits.toLocaleString()} Intelligence Capacity credits / month`,
+                    offer.included.storageGb === null
+                      ? null
+                      : `${offer.included.storageGb} GB storage & business context`,
                     `${offer.included.includedConnectors.join(", ")} connector included`,
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                      <span>{item}</span>
+                  ]
+                    .filter((x): x is string => Boolean(x))
+                    .map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                </ul>
+
+                <Separator className="my-6" />
+
+                <h3 className="font-display text-sm font-semibold uppercase tracking-wide">
+                  How this is charged
+                </h3>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {offer.components.map((c) => (
+                    <li key={c.id} className="flex items-start justify-between gap-3">
+                      <span className="min-w-0">
+                        {c.label}
+                        {c.note ? (
+                          <span className="block text-xs text-muted-foreground">{c.note}</span>
+                        ) : null}
+                      </span>
+                      <Badge variant="outline" className="shrink-0">
+                        {c.treatment === "recurring"
+                          ? cycle === "annual"
+                            ? "Recurring / year"
+                            : "Recurring / month"
+                          : c.treatment === "one_time"
+                            ? "One-time"
+                            : c.treatment === "included"
+                              ? "Included"
+                              : "Quote required"}
+                      </Badge>
                     </li>
                   ))}
                 </ul>
-                {offer.additionalConnectorMonthly !== null ? (
-                  <p className="mt-4 text-xs text-muted-foreground">
-                    Additional connected systems from{" "}
-                    {formatOfferMoney(offer.additionalConnectorMonthly, offer.currency)} / month.
-                  </p>
+                {offer.connectorCommercialTerms ? (
+                  <p className="mt-4 text-xs text-muted-foreground">{offer.connectorCommercialTerms}</p>
                 ) : null}
+
 
                 {offer.addOns.length > 0 ? (
                   <>
@@ -439,15 +495,24 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                               <p className="text-sm font-medium">{a.name}</p>
                               <p className="text-xs text-muted-foreground">
                                 {a.description}{" "}
-                                {cycle === "annual" ? (
+                                {!a.recurring ? (
                                   <>
-                                    {formatOfferMoney(a.unitAmount * 10, offer.currency)} per{" "}
+                                    {formatOfferMoney(a.unitMonthly, offer.currency)} per{" "}
+                                    {a.unitSize.toLocaleString()} {a.unit}, one-time.
+                                  </>
+                                ) : cycle === "annual" ? (
+                                  <>
+                                    {formatOfferMoney(a.unitAnnual, offer.currency)} per{" "}
                                     {a.unitSize.toLocaleString()} {a.unit} / year (
-                                    {formatOfferMoney(a.unitAmount, offer.currency)} / month equivalent).
+                                    {formatOfferMoney(
+                                      a.unitAnnual === null ? null : Math.round(a.unitAnnual / 12),
+                                      offer.currency,
+                                    )}{" "}
+                                    / month equivalent).
                                   </>
                                 ) : (
                                   <>
-                                    {formatOfferMoney(a.unitAmount, offer.currency)} per{" "}
+                                    {formatOfferMoney(a.unitMonthly, offer.currency)} per{" "}
                                     {a.unitSize.toLocaleString()} {a.unit} / month.
                                   </>
                                 )}
@@ -493,8 +558,19 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                 <dl className="mt-4 space-y-2 text-sm">
                   {quote.lines.map((l) => (
                     <div key={l.id} className="flex items-start justify-between gap-3">
-                      <dt className="text-muted-foreground">{l.label}</dt>
-                      <dd className="tabular">{formatOfferMoney(l.amount, quote.currency)}</dd>
+                      <dt className="text-muted-foreground">
+                        {l.label}
+                        {l.treatment === "one_time" ? (
+                          <span className="block text-xs">One-time charge</span>
+                        ) : null}
+                      </dt>
+                      <dd className="tabular">
+                        {l.treatment === "included"
+                          ? "Included"
+                          : l.treatment === "quote_required"
+                            ? "Quote required"
+                            : formatOfferMoney(l.amount, quote.currency)}
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -513,12 +589,26 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                     {quote.annualSavingPct}%
                   </p>
                 ) : null}
+                {quote.oneTimeTotal > 0 ? (
+                  <div className="mt-3 flex items-baseline justify-between text-sm">
+                    <span className="font-medium">One-time charges</span>
+                    <span className="tabular">
+                      {formatOfferMoney(quote.oneTimeTotal, quote.currency)}
+                    </span>
+                  </div>
+                ) : null}
 
-                <Button className="mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90" size="lg" onClick={purchase}>
-                  Get Aura + {connector.name}
+                <Button
+                  className="mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                  size="lg"
+                  onClick={purchase}
+                >
+                  {quote.quoteRequired ? "Request a quote" : `Get Aura + ${connector.name}`}
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Simulated checkout — no payment details are collected.
+                  {quote.quoteRequired
+                    ? "This configuration must be quoted — it does not enter simulated payment."
+                    : "Simulated checkout — no payment details are collected."}
                 </p>
               </CardContent>
             </Card>
@@ -559,7 +649,7 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                   <div className="flex justify-between gap-3 sm:block">
                     <dt className="text-muted-foreground">Market</dt>
                     <dd className="font-medium sm:mt-0.5">
-                      {AURA_MARKETS.find((m) => m.id === purchaseIntent.market)?.name ?? purchaseIntent.market} (
+                      {markets.find((m) => m.id === purchaseIntent.market)?.name ?? purchaseIntent.market} (
                       {purchaseIntent.currency})
                     </dd>
                   </div>
@@ -579,6 +669,26 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                         ? ` / year (${formatOfferMoney(purchaseIntent.quote.monthlyEquivalent, purchaseIntent.currency)} / month equivalent)`
                         : " / month"}
                     </dd>
+                  </div>
+                  {purchaseIntent.quote.oneTimeTotal > 0 ? (
+                    <div className="flex justify-between gap-3 sm:block">
+                      <dt className="text-muted-foreground">One-time charges</dt>
+                      <dd className="font-medium tabular sm:mt-0.5">
+                        {formatOfferMoney(purchaseIntent.quote.oneTimeTotal, purchaseIntent.currency)}
+                      </dd>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Status</dt>
+                    <dd className="font-medium sm:mt-0.5">
+                      {purchaseIntent.lifecycle === "quote_required"
+                        ? "Draft → Quote required"
+                        : "Draft → Pending payment (simulated)"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Catalogue version</dt>
+                    <dd className="font-medium tabular sm:mt-0.5">v{purchaseIntent.catalogueVersion}</dd>
                   </div>
                 </dl>
 

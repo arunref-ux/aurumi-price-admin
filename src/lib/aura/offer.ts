@@ -1,17 +1,28 @@
 /**
  * Simulated Aura offer / pricing provider.
  *
- * This module is deliberately shaped like the eventual pricing API so the
- * simulated provider can later be swapped for the real Price Admin endpoint
- * without touching any UI component:
+ * SINGLE COMMERCIAL SOURCE: this provider derives everything it returns from
+ * the PUBLISHED Price Admin catalogue (`Catalogue.auraOffers` + `Catalogue.prices`).
+ * There is deliberately no independent pricing table here — the public
+ * /aura/<connector> experience and Price Admin read the same commercial data.
  *
- *   getAuraOffer({ connector: "tally", market: "IN" })
+ *   Price Admin -> Published AuraOffer -> this provider -> public product page
  *
- * No commercial value should ever be hard-coded inside a component.
+ * The shape is the eventual Pricing API shape, so this module can later be
+ * replaced by a real service without touching any UI component.
  */
 
-export type AuraMarketId = "IN" | "SG" | "AE" | "US" | "INTL";
-export type AuraBillingCycle = "monthly" | "annual";
+import { findPrice } from "@/lib/commerce/pricing";
+import { auraCommercialComponents, findAuraOffer } from "@/lib/commerce/aura";
+import type {
+  AuraCommercialTreatment,
+  BillingCycle,
+  Catalogue,
+  MarketId,
+} from "@/lib/commerce/types";
+
+export type AuraMarketId = MarketId;
+export type AuraBillingCycle = BillingCycle;
 
 export interface AuraMarketOption {
   id: AuraMarketId;
@@ -19,13 +30,12 @@ export interface AuraMarketOption {
   currency: string;
 }
 
-export const AURA_MARKETS: AuraMarketOption[] = [
-  { id: "IN", name: "India", currency: "INR" },
-  { id: "SG", name: "Singapore", currency: "SGD" },
-  { id: "AE", name: "United Arab Emirates", currency: "AED" },
-  { id: "US", name: "United States", currency: "USD" },
-  { id: "INTL", name: "International", currency: "USD" },
-];
+/** Markets come from the published catalogue — never from a local list. */
+export function auraMarketOptions(catalogue: Catalogue): AuraMarketOption[] {
+  return catalogue.markets
+    .filter((m) => m.active)
+    .map((m) => ({ id: m.id, name: m.name, currency: m.currency }));
+}
 
 export interface AuraAddOn {
   id: string;
@@ -33,20 +43,34 @@ export interface AuraAddOn {
   description: string;
   unit: string;
   unitSize: number;
-  /** Price per increment, in the market currency, per month. */
-  unitAmount: number;
+  /** Price per increment in the market currency, per month / per year. */
+  unitMonthly: number | null;
+  unitAnnual: number | null;
+  recurring: boolean;
   maxQuantity: number;
-  enabled: boolean;
 }
 
 export interface AuraIncludedEntitlements {
-  users: number;
-  intelligenceCredits: number;
-  storageGb: number;
+  users: number | null;
+  intelligenceCredits: number | null;
+  storageGb: number | null;
   includedConnectors: string[];
 }
 
+/** A commercial component of the offer, as presented publicly. */
+export interface AuraOfferComponentView {
+  id: string;
+  label: string;
+  treatment: AuraCommercialTreatment;
+  note?: string | undefined;
+  /** Amount for the selected cycle; null for included / quote-required. */
+  monthly: number | null;
+  annual: number | null;
+  oneTime: number | null;
+}
+
 export interface AuraOffer {
+  offerId: string;
   product: string;
   productTagline: string;
   connector: string;
@@ -54,130 +78,21 @@ export interface AuraOffer {
   market: AuraMarketId;
   marketName: string;
   currency: string;
-  monthlyPrice: number;
-  /** Total billed once per year. */
-  annualPrice: number;
+  monthlyPrice: number | null;
+  annualPrice: number | null;
   included: AuraIncludedEntitlements;
-  /** Price per additional connector per month, when the customer adds one later. */
-  additionalConnectorMonthly: number | null;
+  components: AuraOfferComponentView[];
   addOns: AuraAddOn[];
   taxNote: string;
+  connectorCommercialTerms: string;
+  quoteRequired: boolean;
+  quoteReasons: string[];
 }
-
-interface MarketPricing {
-  currency: string;
-  monthlyPrice: number;
-  annualPrice: number;
-  additionalConnectorMonthly: number | null;
-  taxNote: string;
-  addOnUnitAmounts: Record<string, number>;
-}
-
-/** Per-connector simulated commercial configuration (stands in for Price Admin data). */
-interface ConnectorOfferConfig {
-  connectorName: string;
-  included: AuraIncludedEntitlements;
-  addOns: Omit<AuraAddOn, "unitAmount">[];
-  pricing: Record<AuraMarketId, MarketPricing>;
-}
-
-const AURA_TALLY_PRICING: Record<AuraMarketId, MarketPricing> = {
-
-  IN: {
-    currency: "INR",
-    monthlyPrice: 4999,
-    annualPrice: 49990,
-    additionalConnectorMonthly: 2499,
-    taxNote: "Prices exclude GST.",
-    addOnUnitAmounts: { "addon.users": 1499, "addon.intelligence": 1999, "addon.storage": 899 },
-  },
-  SG: {
-    currency: "SGD",
-    monthlyPrice: 129,
-    annualPrice: 1290,
-    additionalConnectorMonthly: 65,
-    taxNote: "Prices exclude GST.",
-    addOnUnitAmounts: { "addon.users": 39, "addon.intelligence": 49, "addon.storage": 25 },
-  },
-  AE: {
-    currency: "AED",
-    monthlyPrice: 359,
-    annualPrice: 3590,
-    additionalConnectorMonthly: 179,
-    taxNote: "Prices exclude VAT.",
-    addOnUnitAmounts: { "addon.users": 109, "addon.intelligence": 139, "addon.storage": 69 },
-  },
-  US: {
-    currency: "USD",
-    monthlyPrice: 99,
-    annualPrice: 990,
-    additionalConnectorMonthly: 49,
-    taxNote: "Prices exclude applicable sales tax.",
-    addOnUnitAmounts: { "addon.users": 29, "addon.intelligence": 39, "addon.storage": 19 },
-  },
-  INTL: {
-    currency: "USD",
-    monthlyPrice: 109,
-    annualPrice: 1090,
-    additionalConnectorMonthly: 55,
-    taxNote: "Prices exclude local taxes where applicable.",
-    addOnUnitAmounts: { "addon.users": 32, "addon.intelligence": 42, "addon.storage": 21 },
-  },
-};
-
-const AURA_TALLY_INCLUDED: AuraIncludedEntitlements = {
-  users: 10,
-  intelligenceCredits: 5000,
-  storageGb: 50,
-  includedConnectors: ["Tally"],
-};
-
-const AURA_TALLY_ADDONS: Omit<AuraAddOn, "unitAmount">[] = [
-  {
-    id: "addon.users",
-    name: "Additional users",
-    description: "Add seats in blocks of 10.",
-    unit: "users",
-    unitSize: 10,
-    maxQuantity: 20,
-    enabled: true,
-  },
-  {
-    id: "addon.intelligence",
-    name: "Additional Intelligence Capacity",
-    description: "More questions and deeper analysis each month.",
-    unit: "credits",
-    unitSize: 5000,
-    maxQuantity: 20,
-    enabled: true,
-  },
-  {
-    id: "addon.storage",
-    name: "Additional storage & context",
-    description: "More business context retained for Aura.",
-    unit: "GB",
-    unitSize: 50,
-    maxQuantity: 20,
-    enabled: true,
-  },
-];
-
-/**
- * Connector-keyed offer registry. Each supported Aura + Connector product has
- * its own complete commercial configuration — pricing, included entitlements
- * and add-ons — so one connector can never inherit another's commercial data.
- * Only "tally" is implemented in Phase 1.
- */
-const AURA_OFFERS: Record<string, ConnectorOfferConfig> = {
-  tally: {
-    connectorName: "Tally",
-    included: AURA_TALLY_INCLUDED,
-    addOns: AURA_TALLY_ADDONS,
-    pricing: AURA_TALLY_PRICING,
-  },
-};
 
 export interface GetAuraOfferInput {
+  /** Published catalogue — the authoritative commercial source. */
+  catalogue: Catalogue;
+  /** Catalogue connector id, e.g. "conn.tally". */
   connector: string;
   market: AuraMarketId;
 }
@@ -187,42 +102,95 @@ export type AuraOfferResult =
   | { available: true; offer: AuraOffer }
   | { available: false; connector: string; market: AuraMarketId };
 
-/** Simulated pricing call, keyed by connector AND market. Deterministic and local. */
-export function getAuraOffer({ connector, market }: GetAuraOfferInput): AuraOfferResult {
-  const config = AURA_OFFERS[connector];
-  if (!config) return { available: false, connector, market };
+function taxNoteFor(catalogue: Catalogue, market: AuraMarketId): string {
+  const m = catalogue.markets.find((x) => x.id === market);
+  if (!m) return "";
+  if (m.taxIncluded) return `Prices include ${m.taxName}.`;
+  return `Prices exclude ${m.taxName}.`;
+}
 
-  const pricing = config.pricing[market];
-  if (!pricing) return { available: false, connector, market };
+/** Simulated pricing call, keyed by connector AND market, sourced from the catalogue. */
+export function getAuraOffer({ catalogue, connector, market }: GetAuraOfferInput): AuraOfferResult {
+  const published = (catalogue.auraOffers ?? []).find(
+    (o) => o.connectorId === connector && o.active && o.status === "Available",
+  );
+  if (!published) return { available: false, connector, market };
+  if (!published.eligibleMarkets.includes(market)) return { available: false, connector, market };
 
-  const marketOption = AURA_MARKETS.find((m) => m.id === market) ?? AURA_MARKETS[4]!;
+  const connectorRow = catalogue.connectors.find((c) => c.id === published.connectorId);
+  if (!connectorRow?.standaloneAuraOffering || !connectorRow.active) {
+    return { available: false, connector, market };
+  }
+  const marketRow = catalogue.markets.find((m) => m.id === market);
+  if (!marketRow) return { available: false, connector, market };
+
+  const offer = findAuraOffer(catalogue, published.id)!;
+  const rule = findPrice(catalogue, offer.id, market);
+
+  const components = auraCommercialComponents(catalogue, offer, market).map((c) => ({
+    id: c.id,
+    label: c.label,
+    treatment: c.treatment,
+    note: c.note,
+    monthly: c.monthly,
+    annual: c.annual,
+    oneTime: c.oneTime,
+  }));
+
+  const quoteReasons = components
+    .filter((c) => c.treatment === "quote_required")
+    .map((c) => `${c.label}: quote required`);
+
+  const addOns: AuraAddOn[] = catalogue.addOns
+    .filter(
+      (a) => a.active && offer.enabledAddOnIds.includes(a.id) && a.eligibleMarkets.includes(market),
+    )
+    .map((a) => {
+      const r = findPrice(catalogue, a.id, market);
+      return {
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        unit: a.unit,
+        unitSize: a.unitSize,
+        unitMonthly: r?.monthly ?? null,
+        unitAnnual: r?.annual ?? null,
+        recurring: a.recurring,
+        maxQuantity: a.maxQuantity ?? 20,
+      };
+    });
 
   return {
     available: true,
     offer: {
+      offerId: offer.id,
       product: "Aura",
       productTagline: "Talk to Your Business",
-      connector,
-      connectorName: config.connectorName,
+      connector: offer.connectorId,
+      connectorName: connectorRow.name,
       market,
-      marketName: marketOption.name,
-      currency: pricing.currency,
-      monthlyPrice: pricing.monthlyPrice,
-      annualPrice: pricing.annualPrice,
-      included: config.included,
-      additionalConnectorMonthly: pricing.additionalConnectorMonthly,
-      addOns: config.addOns
-        .map((a) => ({
-          ...a,
-          unitAmount: pricing.addOnUnitAmounts[a.id] ?? 0,
-        }))
-        .filter((a) => a.enabled),
-      taxNote: pricing.taxNote,
+      marketName: marketRow.name,
+      currency: marketRow.currency,
+      monthlyPrice: rule?.quoteOnly ? null : (rule?.monthly ?? null),
+      annualPrice: rule?.quoteOnly ? null : (rule?.annual ?? null),
+      included: {
+        users: offer.includedUsers,
+        intelligenceCredits: offer.includedIntelligence,
+        storageGb: offer.includedStorageGb,
+        includedConnectors: [connectorRow.name],
+      },
+      components,
+      addOns,
+      taxNote: taxNoteFor(catalogue, market),
+      connectorCommercialTerms: offer.connectorCommercialTerms,
+      quoteRequired: quoteReasons.length > 0,
+      quoteReasons,
     },
   };
 }
 
-export function formatOfferMoney(amount: number, currency: string): string {
+export function formatOfferMoney(amount: number | null | undefined, currency: string): string {
+  if (amount === null || amount === undefined) return "—";
   try {
     return new Intl.NumberFormat("en", {
       style: "currency",
@@ -234,85 +202,125 @@ export function formatOfferMoney(amount: number, currency: string): string {
   }
 }
 
+export interface AuraQuoteLine {
+  id: string;
+  label: string;
+  treatment: AuraCommercialTreatment;
+  /** null for included and quote-required lines. */
+  amount: number | null;
+  recurring: boolean;
+}
+
 export interface AuraQuote {
   currency: string;
   cycle: AuraBillingCycle;
-  /** Amount charged each billing cycle. */
+  /** Recurring amount charged each billing cycle. */
   cycleTotal: number;
-  /** Comparable monthly figure (annual divided by 12). */
+  /** Comparable monthly figure. */
   monthlyEquivalent: number;
-  baseAmount: number;
-  addOnAmount: number;
+  oneTimeTotal: number;
   annualSavingPct: number;
-  annualBilled: number;
-  lines: { id: string; label: string; amount: number }[];
+  quoteRequired: boolean;
+  quoteReasons: string[];
+  lines: AuraQuoteLine[];
 }
 
-/** Pure calculation over the simulated offer — no UI concerns. */
+/** Pure calculation over the published offer — no UI concerns, no local prices. */
 export function calculateAuraQuote(
   offer: AuraOffer,
   cycle: AuraBillingCycle,
   addOnQty: Record<string, number>,
 ): AuraQuote {
-  const multiplier = cycle === "annual" ? 10 : 1; // annual = 10 months (2 months free)
-  const baseAmount = cycle === "annual" ? offer.annualPrice : offer.monthlyPrice;
+  const lines: AuraQuoteLine[] = [];
+  let recurring = 0;
+  let oneTime = 0;
 
-  const lines: AuraQuote["lines"] = [
-    {
-      id: "base",
-      label: `Aura + ${offer.connectorName}`,
-      amount: baseAmount,
-    },
-  ];
+  for (const c of offer.components) {
+    if (c.treatment === "included") {
+      lines.push({ id: c.id, label: c.label, treatment: "included", amount: null, recurring: false });
+      continue;
+    }
+    if (c.treatment === "quote_required") {
+      lines.push({ id: c.id, label: c.label, treatment: "quote_required", amount: null, recurring: false });
+      continue;
+    }
+    if (c.treatment === "one_time") {
+      const amount = c.oneTime ?? 0;
+      oneTime += amount;
+      lines.push({ id: c.id, label: c.label, treatment: "one_time", amount, recurring: false });
+      continue;
+    }
+    const amount = (cycle === "annual" ? c.annual : c.monthly) ?? 0;
+    recurring += amount;
+    lines.push({ id: c.id, label: c.label, treatment: "recurring", amount, recurring: true });
+  }
 
-  let addOnAmount = 0;
   for (const addOn of offer.addOns) {
     const qty = addOnQty[addOn.id] ?? 0;
     if (!qty) continue;
-    const amount = addOn.unitAmount * qty * multiplier;
-    addOnAmount += amount;
+    const unit = addOn.recurring
+      ? ((cycle === "annual" ? addOn.unitAnnual : addOn.unitMonthly) ?? 0)
+      : (addOn.unitMonthly ?? 0);
+    const amount = unit * qty;
+    if (addOn.recurring) recurring += amount;
+    else oneTime += amount;
     lines.push({
       id: addOn.id,
       label: `${addOn.name} · ${(qty * addOn.unitSize).toLocaleString()} ${addOn.unit}`,
+      treatment: addOn.recurring ? "recurring" : "one_time",
       amount,
+      recurring: addOn.recurring,
     });
   }
 
-  const cycleTotal = baseAmount + addOnAmount;
-  const monthlyList = offer.monthlyPrice + Object.entries(addOnQty).reduce((sum, [id, qty]) => {
-    const addOn = offer.addOns.find((a) => a.id === id);
-    return addOn ? sum + addOn.unitAmount * (qty ?? 0) : sum;
-  }, 0);
-  const annualBilled = cycle === "annual" ? cycleTotal : monthlyList * 12;
+  const monthlyList =
+    (offer.monthlyPrice ?? 0) +
+    offer.addOns.reduce(
+      (sum, a) => sum + (a.recurring ? (a.unitMonthly ?? 0) * (addOnQty[a.id] ?? 0) : 0),
+      0,
+    );
+  const annualList =
+    (offer.annualPrice ?? 0) +
+    offer.addOns.reduce(
+      (sum, a) => sum + (a.recurring ? (a.unitAnnual ?? 0) * (addOnQty[a.id] ?? 0) : 0),
+      0,
+    );
   const annualSavingPct =
-    monthlyList > 0 ? Math.max(0, Math.round((1 - (monthlyList * 10) / (monthlyList * 12)) * 100)) : 0;
+    monthlyList > 0 && annualList > 0
+      ? Math.max(0, Math.round((1 - annualList / (monthlyList * 12)) * 100))
+      : 0;
 
   return {
     currency: offer.currency,
     cycle,
-    cycleTotal,
-    monthlyEquivalent: cycle === "annual" ? Math.round(cycleTotal / 12) : cycleTotal,
-    baseAmount,
-    addOnAmount,
+    cycleTotal: recurring,
+    monthlyEquivalent: cycle === "annual" ? Math.round(recurring / 12) : recurring,
+    oneTimeTotal: oneTime,
     annualSavingPct,
-    annualBilled,
+    quoteRequired: offer.quoteRequired,
+    quoteReasons: offer.quoteReasons,
     lines,
   };
 }
 
-/** Everything a simulated checkout would need to hand to a real provider later. */
+/** Everything a simulated checkout would hand to a real provider later. */
 export interface AuraPurchaseIntent {
   product: string;
+  offerId: string;
   connector: string;
+  catalogueVersion: number;
   market: AuraMarketId;
   cycle: AuraBillingCycle;
   currency: string;
   addOns: { id: string; quantity: number; units: number }[];
   quote: AuraQuote;
+  /** DRAFT -> QUOTE REQUIRED, or DRAFT -> PENDING PAYMENT (simulated). */
+  lifecycle: "quote_required" | "pending_payment";
   createdAt: string;
 }
 
 export function buildPurchaseIntent(
+  catalogue: Catalogue,
   offer: AuraOffer,
   cycle: AuraBillingCycle,
   addOnQty: Record<string, number>,
@@ -320,7 +328,9 @@ export function buildPurchaseIntent(
   const quote = calculateAuraQuote(offer, cycle, addOnQty);
   return {
     product: offer.product,
+    offerId: offer.offerId,
     connector: offer.connector,
+    catalogueVersion: catalogue.version,
     market: offer.market,
     cycle,
     currency: offer.currency,
@@ -328,6 +338,7 @@ export function buildPurchaseIntent(
       .filter((a) => (addOnQty[a.id] ?? 0) > 0)
       .map((a) => ({ id: a.id, quantity: addOnQty[a.id]!, units: addOnQty[a.id]! * a.unitSize })),
     quote,
+    lifecycle: quote.quoteRequired ? "quote_required" : "pending_payment",
     createdAt: new Date().toISOString(),
   };
 }
