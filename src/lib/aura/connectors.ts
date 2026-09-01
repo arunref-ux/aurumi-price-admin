@@ -32,3 +32,16 @@ export const TALLY_CONNECTOR: AuraConnectorConfig = {
   sampleQuestions: SAMPLE_QUESTIONS,
   answer: answerTallyQuestion,
 };
+
+export const QUICKBOOKS_CONNECTOR: AuraConnectorConfig = {
+  id: "quickbooks",
+  catalogueConnectorId: "conn.quickbooks",
+  name: "QuickBooks",
+  systemNoun: "QuickBooks",
+  heroSupporting:
+    "Connect Aura to QuickBooks and ask questions about your business in natural language — revenue, customers, invoices, expenses, vendors and cash flow.",
+  demoCompanyName: QB_DEMO_COMPANY.name,
+  demoDisclaimer: "Demo powered by representative QuickBooks business data.",
+  sampleQuestions: QB_SAMPLE_QUESTIONS,
+  answer: answerQuickBooksQuestion,
+};
