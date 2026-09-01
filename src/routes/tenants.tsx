@@ -364,6 +364,13 @@ function TenantsPage() {
               </CardContent>
             </Card>
 
+            <WorkspaceBundleAddOns
+              published={published}
+              subscription={sub}
+              onAdd={(addition) => addBundleAddition(sub, addition)}
+              onActivate={(additionId) => activateBundleAddition(sub, additionId)}
+            />
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Subscription history</CardTitle>
