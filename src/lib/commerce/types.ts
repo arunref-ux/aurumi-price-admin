@@ -16,7 +16,9 @@ export type EntitlementKey =
   | "capacity.transfer"
   | "support.level"
   | "governance.advanced"
-  | "sla";
+  | "sla"
+  | "aura.capability"
+  | "aura.connector";
 
 export interface Entitlement {
   key: EntitlementKey;
@@ -116,12 +118,45 @@ export interface Connector {
   hasOneTimePrice: boolean;
   quoteOnly: boolean;
   /**
+   * COMMERCIAL availability, not technical compatibility. Every supported
+   * connector works with Aura; this says whether "Aura + <connector>" may be
+   * sold directly, without an Aurumi Workspace plan.
+   */
+  standaloneAuraOffering: boolean;
+  /**
    * Free-text description of a bespoke commercial treatment, used when a
    * sellable connector is neither priced nor quote-only.
    */
   customCommercialTreatment?: string;
 }
 
+
+/**
+ * A standalone Aura offering: the Aura capability (TTYB) sold together with one
+ * business-context connector, without an Aurumi Workspace plan. Prices live in
+ * the shared PriceRule table under `productId === offer.id`.
+ */
+export interface AuraOffer {
+  id: string;
+  name: string;
+  /** Aura is the single product family — TTYB is its customer-facing language. */
+  product: "aura";
+  connectorId: string;
+  description: string;
+  status: "Draft" | "Available" | "Retired";
+  eligibleMarkets: MarketId[];
+  includedUsers: number | null;
+  includedIntelligence: number | null;
+  includedStorageGb: number | null;
+  /** Only these add-ons may be sold with this offer. */
+  enabledAddOnIds: string[];
+  /** Connector-specific commercial terms that apply to this offer. */
+  connectorCommercialTerms: string;
+  professionalServicesRequired: boolean;
+  /** Offer price cannot be calculated — DRAFT -> QUOTE REQUIRED. */
+  quoteOnly: boolean;
+  active: boolean;
+}
 
 export type AddOnUnit = "user" | "GB" | "AIC" | "TB";
 
@@ -199,6 +234,8 @@ export interface Catalogue {
   apps: AurumiApp[];
   connectors: Connector[];
   addOns: AddOn[];
+  /** Standalone Aura offerings (Aura + connector), sold without a Workspace plan. */
+  auraOffers: AuraOffer[];
   markets: Market[];
   promotions: Promotion[];
   prices: PriceRule[];
@@ -269,7 +306,12 @@ export type SimulatedPaymentStatus =
 export interface TenantSubscription {
   id: string;
   tenantId: string;
+  /** Which commercial starting point this subscription was built from. */
+  productLine: "workspace" | "aura";
+  /** Empty string for a standalone Aura subscription — no Workspace plan applies. */
   planId: string;
+  /** Set only for standalone Aura subscriptions. */
+  auraOfferId: string | null;
   market: MarketId;
   currency: string;
   billingCycle: BillingCycle;
