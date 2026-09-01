@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
+
 import type { AuraConnectorConfig } from "@/lib/aura/connectors";
 import type { DemoAnswer } from "@/lib/aura/tally-demo";
 import {
@@ -540,7 +540,7 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                   </span>
                 </div>
                 <h2 className="mt-4 font-display text-2xl font-semibold sm:text-3xl">
-                  Your Aura + {purchaseIntent.quote ? connector.name : connector.name} setup is ready
+                  Your Aura + {connector.name} setup is ready
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   This is a simulated signup for demonstration purposes. No real subscription has been
