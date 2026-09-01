@@ -476,6 +476,8 @@ export interface TenantSubscription {
   cancellationRequested: boolean;
   cancellationEffective: string | null;
   entitlements: Entitlement[];
+  /** Published bundles added to this Workspace subscription (optional/legacy-safe). */
+  bundleAdditions?: WorkspaceBundleAddition[];
   changeLog: SubscriptionChange[];
 }
 
