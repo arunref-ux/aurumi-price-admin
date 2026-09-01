@@ -4,10 +4,12 @@ import {
   Blocks,
   Boxes,
   Building2,
+  ExternalLink,
   Gauge,
   Globe2,
   LayoutDashboard,
   Layers,
+  Megaphone,
   Percent,
   Plug,
   Settings2,
@@ -40,6 +42,10 @@ const TENANT_NAV = [
   { to: "/tenants", label: "Tenant Subscriptions", icon: Building2 },
   { to: "/subscriptions/new", label: "Subscription Builder", icon: Sparkles },
   { to: "/pricing", label: "Public Pricing Preview", icon: Tags },
+] as const;
+
+const DEMO_NAV = [
+  { to: "/aura/tally", label: "Aura + Tally (Product Demo)", icon: Megaphone, external: true },
 ] as const;
 
 export function AdminLayout({ children }: { children: ReactNode }) {
