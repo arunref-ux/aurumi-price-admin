@@ -51,8 +51,17 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
   const [cycle, setCycle] = useState<AuraBillingCycle>("monthly");
   const [addOnQty, setAddOnQty] = useState<Record<string, number>>({});
 
-  const offer = useMemo(() => getAuraOffer({ connector: connector.id, market }), [connector.id, market]);
-  const quote = useMemo(() => calculateAuraQuote(offer, cycle, addOnQty), [offer, cycle, addOnQty]);
+  const offerResult = useMemo(
+    () => getAuraOffer({ connector: connector.id, market }),
+    [connector.id, market],
+  );
+  const offer = offerResult.available ? offerResult.offer : null;
+  const quote = useMemo(
+    () => (offer ? calculateAuraQuote(offer, cycle, addOnQty) : null),
+    [offer, cycle, addOnQty],
+  );
+  const [purchaseIntent, setPurchaseIntent] = useState<AuraPurchaseIntent | null>(null);
+
 
   const ask = (question: string) => {
     const q = question.trim();
