@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { seedState } from "./seed";
+import { AURA_OFFERS, seedState } from "./seed";
 import { validateCatalogue, type Issue } from "./validation";
 import type { Catalogue, CommerceState, TenantSubscription } from "./types";
 
@@ -43,6 +43,25 @@ function migrateV1(raw: string, base: CommerceState): CommerceState | null {
 }
 
 
+/**
+ * Forward-compatibility for prototype storage written before standalone Aura
+ * offers existed: fill in the new commercial fields without discarding data.
+ */
+function normaliseCatalogue(c: Catalogue): Catalogue {
+  return {
+    ...c,
+    auraOffers: Array.isArray(c.auraOffers) ? c.auraOffers : AURA_OFFERS,
+    connectors: (c.connectors ?? []).map((conn) => ({
+      ...conn,
+      standaloneAuraOffering: Boolean(conn.standaloneAuraOffering),
+    })),
+  };
+}
+
+function normaliseState(s: CommerceState): CommerceState {
+  return { ...s, draft: normaliseCatalogue(s.draft), published: normaliseCatalogue(s.published) };
+}
+
 interface CommerceContextValue {
   state: CommerceState;
   /** Working (draft) catalogue — what administrators edit. */
@@ -76,7 +95,7 @@ export function CommerceProvider({ children }: { children: ReactNode }) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        setState(JSON.parse(raw) as CommerceState);
+        setState(normaliseState(JSON.parse(raw) as CommerceState));
         setHydrated(true);
         return;
       }
