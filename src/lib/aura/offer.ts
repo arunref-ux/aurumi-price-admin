@@ -73,8 +73,16 @@ interface MarketPricing {
   addOnUnitAmounts: Record<string, number>;
 }
 
-/** Simulated commercial configuration layer (stands in for Price Admin data). */
+/** Per-connector simulated commercial configuration (stands in for Price Admin data). */
+interface ConnectorOfferConfig {
+  connectorName: string;
+  included: AuraIncludedEntitlements;
+  addOns: Omit<AuraAddOn, "unitAmount" | "enabled">[] & { enabled: boolean }[];
+  pricing: Record<AuraMarketId, MarketPricing>;
+}
+
 const AURA_TALLY_PRICING: Record<AuraMarketId, MarketPricing> = {
+
   IN: {
     currency: "INR",
     monthlyPrice: 4999,
