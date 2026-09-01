@@ -3,6 +3,7 @@
  * Adding /aura/<connector> later means adding one entry here plus a route file.
  */
 import { SAMPLE_QUESTIONS, answerTallyQuestion, DEMO_COMPANY, type DemoAnswer, type DemoQuestion } from "./tally-demo";
+import { QB_SAMPLE_QUESTIONS, answerQuickBooksQuestion, QB_DEMO_COMPANY } from "./quickbooks-demo";
 
 export interface AuraConnectorConfig {
   /** URL segment for /aura/<id>. */
