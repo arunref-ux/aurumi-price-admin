@@ -255,6 +255,40 @@ export interface BundleOffer {
   active: boolean;
 }
 
+/**
+ * A published BundleOffer added to an EXISTING Workspace subscription.
+ * It is a commercial addition only — the Workspace plan identity is untouched
+ * and no second bundle product exists: `bundleId` points at the same offer the
+ * standalone Aura path sells.
+ */
+export interface WorkspaceBundleAddition {
+  id: string;
+  bundleId: string;
+  bundleName: string;
+  /** Catalogue version of the PUBLISHED bundle used for this addition. */
+  catalogueVersion: number;
+  market: MarketId;
+  billingCycle: BillingCycle;
+  currency: string;
+  connectorIds: string[];
+  addOns: { id: string; quantity: number; units: number }[];
+  /** Incremental recurring charge for the chosen billing cycle. */
+  recurringAmount: number;
+  oneTimeAmount: number;
+  quoteReasons: string[];
+  lines: {
+    id: string;
+    label: string;
+    treatment: AuraCommercialTreatment;
+    amount: number | null;
+    recurring: boolean;
+  }[];
+  status: "quote_required" | "pending_payment" | "active";
+  createdAt: string;
+}
+
+
+
 
 
 
