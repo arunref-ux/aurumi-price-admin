@@ -22,6 +22,7 @@ import { Route as PromotionsRouteImport } from './routes/promotions'
 import { Route as RulesRouteImport } from './routes/rules'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TenantsRouteImport } from './routes/tenants'
+import { Route as AuraTallyRouteImport } from './routes/aura.tally'
 import { Route as SubscriptionsNewRouteImport } from './routes/subscriptions.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +90,11 @@ const TenantsRoute = TenantsRouteImport.update({
   path: '/tenants',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuraTallyRoute = AuraTallyRouteImport.update({
+  id: '/aura/tally',
+  path: '/aura/tally',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubscriptionsNewRoute = SubscriptionsNewRouteImport.update({
   id: '/subscriptions/new',
   path: '/subscriptions/new',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
   '/tenants': typeof TenantsRoute
+  '/aura/tally': typeof AuraTallyRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
   '/tenants': typeof TenantsRoute
+  '/aura/tally': typeof AuraTallyRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
   '/tenants': typeof TenantsRoute
+  '/aura/tally': typeof AuraTallyRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/tenants'
+    | '/aura/tally'
     | '/subscriptions/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/tenants'
+    | '/aura/tally'
     | '/subscriptions/new'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/tenants'
+    | '/aura/tally'
     | '/subscriptions/new'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   RulesRoute: typeof RulesRoute
   SettingsRoute: typeof SettingsRoute
   TenantsRoute: typeof TenantsRoute
+  AuraTallyRoute: typeof AuraTallyRoute
   SubscriptionsNewRoute: typeof SubscriptionsNewRoute
 }
 
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TenantsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aura/tally': {
+      id: '/aura/tally'
+      path: '/aura/tally'
+      fullPath: '/aura/tally'
+      preLoaderRoute: typeof AuraTallyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subscriptions/new': {
       id: '/subscriptions/new'
       path: '/subscriptions/new'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   RulesRoute: RulesRoute,
   SettingsRoute: SettingsRoute,
   TenantsRoute: TenantsRoute,
+  AuraTallyRoute: AuraTallyRoute,
   SubscriptionsNewRoute: SubscriptionsNewRoute,
 }
 export const routeTree = rootRouteImport
