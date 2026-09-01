@@ -91,7 +91,11 @@ function normaliseCatalogue(c: Catalogue, scope: "draft" | "published"): Catalog
 
 
 function normaliseState(s: CommerceState): CommerceState {
-  return { ...s, draft: normaliseCatalogue(s.draft), published: normaliseCatalogue(s.published) };
+  return {
+    ...s,
+    draft: normaliseCatalogue(s.draft, "draft"),
+    published: normaliseCatalogue(s.published, "published"),
+  };
 }
 
 interface CommerceContextValue {
