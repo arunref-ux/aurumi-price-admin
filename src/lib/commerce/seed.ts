@@ -532,6 +532,7 @@ export const PRICES: PriceRule[] = [
   }),
   ...ADDONS.flatMap((a) => priceRows(a.id, ADDON_USD[a.id] ?? null, 15)),
   ...AURA_OFFERS.flatMap((o) => priceRows(o.id, AURA_OFFER_USD[o.id] ?? null, 20, o.quoteOnly)),
+  ...BUNDLES.flatMap((b) => priceRows(b.id, BUNDLE_USD[b.id] ?? null, 20, b.quoteOnly)),
 ];
 
 export const PROMOTIONS: Promotion[] = [
