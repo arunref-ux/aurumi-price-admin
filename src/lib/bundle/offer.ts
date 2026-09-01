@@ -11,6 +11,7 @@
 import { findPrice } from "@/lib/commerce/pricing";
 import {
   bundleCommercialComponents,
+  bundleEligibility,
   bundleQuoteReasons,
   findBundle,
 } from "@/lib/commerce/bundles";
@@ -90,6 +91,11 @@ export interface BundleOfferView {
   commercialTerms: string;
   quoteRequired: boolean;
   quoteReasons: string[];
+  /** Published purchase eligibility — two independent commercial permissions. */
+  availableDirectlyWithAura: boolean;
+  availableAsWorkspaceAddon: boolean;
+  /** DERIVED, never stored. */
+  requiresWorkspace: boolean;
   catalogueVersion: number;
 }
 
@@ -132,6 +138,7 @@ export function getBundleOffer({
   const rule = findPrice(catalogue, published.id, market);
   const resolved = bundleCommercialComponents(catalogue, published, market);
   const quoteReasons = bundleQuoteReasons(resolved);
+  const eligibility = bundleEligibility(published);
 
   const connectors: BundleConnectorView[] = published.connectorIds
     .map((id): BundleConnectorView | null => {
@@ -201,6 +208,10 @@ export function getBundleOffer({
       commercialTerms: published.commercialTerms,
       quoteRequired: quoteReasons.length > 0,
       quoteReasons,
+      availableDirectlyWithAura: eligibility.availableDirectlyWithAura,
+      availableAsWorkspaceAddon: eligibility.availableAsWorkspaceAddon,
+      requiresWorkspace:
+        !eligibility.availableDirectlyWithAura && eligibility.availableAsWorkspaceAddon,
       catalogueVersion: catalogue.version,
     },
   };
