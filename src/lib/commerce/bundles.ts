@@ -97,7 +97,7 @@ export function bundleCommercialComponents(
   bundle: BundleOffer,
   market: MarketId,
 ): ResolvedBundleComponent[] {
-  return bundleComponents(bundle).map((c) => {
+  return bundleComponentsForMarket(bundle, market).map((c) => {
     const base: ResolvedBundleComponent = {
       id: c.id,
       label: c.label,
