@@ -11,6 +11,7 @@
 import { findPrice } from "@/lib/commerce/pricing";
 import {
   bundleCommercialComponents,
+  bundleConnectorIdsForMarket,
   bundleEligibility,
   bundleQuoteReasons,
   findBundle,
