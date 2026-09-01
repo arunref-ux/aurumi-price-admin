@@ -326,6 +326,9 @@ export interface Catalogue {
   addOns: AddOn[];
   /** Standalone Aura offerings (Aura + connector), sold without a Workspace plan. */
   auraOffers: AuraOffer[];
+  /** Bundles — curated multi-component commercial offers. */
+  bundles: BundleOffer[];
+
   markets: Market[];
   promotions: Promotion[];
   prices: PriceRule[];
