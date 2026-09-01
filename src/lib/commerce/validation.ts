@@ -1,5 +1,19 @@
 import { findPrice } from "./pricing";
+import { bundleComponents } from "./bundles";
 import type { BillingCycle, Catalogue, Connector, MarketId } from "./types";
+
+/** Any catalogue entity a commercial component may be priced against. */
+function productExists(catalogue: Catalogue, productId: string): boolean {
+  const base = productId.replace(/:setup$/, "");
+  return (
+    catalogue.plans.some((p) => p.id === base) ||
+    catalogue.apps.some((a) => a.id === base) ||
+    catalogue.connectors.some((c) => c.id === base) ||
+    catalogue.addOns.some((a) => a.id === base) ||
+    (catalogue.auraOffers ?? []).some((o) => o.id === base) ||
+    (catalogue.bundles ?? []).some((b) => b.id === base)
+  );
+}
 
 /** True when a connector has at least one calculable payable amount in this selection. */
 function hasCalculableAmount(catalogue: Catalogue, c: Connector, sel: Selection): boolean {
