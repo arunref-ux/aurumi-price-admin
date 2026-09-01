@@ -216,7 +216,14 @@ export interface BundleOfferComponent {
   productId?: string;
   /** Catalogue connector id when this component packages a connector. */
   connectorId?: string;
+  /**
+   * Markets this component applies to. Omitted = every market the bundle is
+   * offered in. Lets one BundleOffer carry a market-specific composition
+   * without becoming a second product.
+   */
+  eligibleMarkets?: MarketId[];
   note?: string;
+
   /** A required quote component forces DRAFT -> QUOTE REQUIRED. */
   required: boolean;
 }
