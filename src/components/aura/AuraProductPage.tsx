@@ -523,8 +523,103 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
               </CardContent>
             </Card>
           </div>
+          )}
         </div>
       </section>
+
+      {/* Simulated purchase confirmation */}
+      {purchaseIntent ? (
+        <section id="aura-purchase-result" className="scroll-mt-6 border-t border-border bg-muted/40 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-5 sm:px-8">
+            <Card className="border-accent/40 shadow-sm">
+              <CardContent className="p-6 sm:p-8">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-accent text-accent-foreground">Simulated purchase</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Demo purchase — no payment has been made.
+                  </span>
+                </div>
+                <h2 className="mt-4 font-display text-2xl font-semibold sm:text-3xl">
+                  Your Aura + {purchaseIntent.quote ? connector.name : connector.name} setup is ready
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This is a simulated signup for demonstration purposes. No real subscription has been
+                  created and no payment details were collected.
+                </p>
+
+                <Separator className="my-6" />
+
+                <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Product</dt>
+                    <dd className="font-medium sm:mt-0.5">
+                      Aura + {connector.name}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Market</dt>
+                    <dd className="font-medium sm:mt-0.5">
+                      {AURA_MARKETS.find((m) => m.id === purchaseIntent.market)?.name ?? purchaseIntent.market} (
+                      {purchaseIntent.currency})
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">Billing cycle</dt>
+                    <dd className="font-medium sm:mt-0.5">
+                      {purchaseIntent.cycle === "annual" ? "Annual" : "Monthly"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">
+                      {purchaseIntent.cycle === "annual" ? "Recurring (billed annually)" : "Recurring (per month)"}
+                    </dt>
+                    <dd className="font-medium tabular sm:mt-0.5">
+                      {formatOfferMoney(purchaseIntent.quote.cycleTotal, purchaseIntent.currency)}
+                      {purchaseIntent.cycle === "annual"
+                        ? ` / year (${formatOfferMoney(purchaseIntent.quote.monthlyEquivalent, purchaseIntent.currency)} / month equivalent)`
+                        : " / month"}
+                    </dd>
+                  </div>
+                </dl>
+
+                {purchaseIntent.addOns.length > 0 ? (
+                  <>
+                    <Separator className="my-6" />
+                    <h3 className="font-display text-sm font-semibold uppercase tracking-wide">
+                      Selected add-ons
+                    </h3>
+                    <ul className="mt-3 space-y-2 text-sm">
+                      {purchaseIntent.addOns.map((a) => {
+                        const line = purchaseIntent.quote.lines.find((l) => l.id === a.id);
+                        return (
+                          <li key={a.id} className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground">
+                              {line?.label ?? a.id}
+                            </span>
+                            <span className="tabular">
+                              {line ? formatOfferMoney(line.amount, purchaseIntent.currency) : "—"}
+                              {purchaseIntent.cycle === "annual" ? " / year" : " / month"}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                ) : null}
+
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Button className="bg-accent text-accent-foreground hover:bg-accent/90" disabled>
+                    Start Setup (simulated)
+                  </Button>
+                  <Button variant="outline" onClick={() => setPurchaseIntent(null)}>
+                    Adjust configuration
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      ) : null}
 
       {/* Upgrade path */}
       <section className="border-t border-border bg-muted/30 py-12">
