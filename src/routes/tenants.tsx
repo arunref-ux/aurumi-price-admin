@@ -16,8 +16,17 @@ import {
 import { useCommerce } from "@/lib/commerce/store";
 import { formatMoney } from "@/lib/commerce/pricing";
 import { CHARGE_CLASS_LABEL, type ChargeClass } from "@/lib/commerce/cart";
-import { ENTITLEMENT_LABELS, summariseEntitlements } from "@/lib/commerce/entitlements";
-import type { SubscriptionStatus, TenantSubscription } from "@/lib/commerce/types";
+import {
+  bundleAdditionEntitlements,
+  ENTITLEMENT_LABELS,
+  summariseEntitlements,
+} from "@/lib/commerce/entitlements";
+import { WorkspaceBundleAddOns } from "@/components/admin/WorkspaceBundleAddOns";
+import type {
+  SubscriptionStatus,
+  TenantSubscription,
+  WorkspaceBundleAddition,
+} from "@/lib/commerce/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/tenants")({
@@ -95,6 +104,54 @@ function TenantsPage() {
     }));
     toast.success(description);
   };
+
+  /** Bundle addition — the Workspace plan identity is never modified. */
+  const logEntry = (type: TenantSubscription["changeLog"][number]["type"], description: string) => {
+    const now = new Date().toISOString();
+    return {
+      id: `chg.${Math.random().toString(36).slice(2, 8)}`,
+      type,
+      description,
+      timing: "immediate" as const,
+      prorated: false,
+      effectiveDate: now,
+      createdAt: now,
+    };
+  };
+
+  const addBundleAddition = (s: TenantSubscription, addition: WorkspaceBundleAddition) => {
+    updateSubscription(s.id, (prev) => ({
+      ...prev,
+      bundleAdditions: [...(prev.bundleAdditions ?? []), addition],
+      changeLog: [
+        logEntry(
+          addition.status === "quote_required" ? "quote_requested" : "created",
+          addition.status === "quote_required"
+            ? `${addition.bundleName} added to Workspace — quote required`
+            : `${addition.bundleName} added to Workspace — awaiting simulated payment`,
+        ),
+        ...prev.changeLog,
+      ],
+    }));
+  };
+
+  const activateBundleAddition = (s: TenantSubscription, additionId: string) => {
+    updateSubscription(s.id, (prev) => {
+      const target = (prev.bundleAdditions ?? []).find((a) => a.id === additionId);
+      return {
+        ...prev,
+        bundleAdditions: (prev.bundleAdditions ?? []).map((a) =>
+          a.id === additionId ? { ...a, status: "active" as const } : a,
+        ),
+        changeLog: [
+          logEntry("activated", `Simulated payment succeeded — ${target?.bundleName ?? "bundle"} active`),
+          ...prev.changeLog,
+        ],
+      };
+    });
+    toast.success("Simulated payment succeeded — bundle added to the Workspace subscription");
+  };
+
 
   return (
     <AdminLayout>
@@ -348,7 +405,12 @@ function TenantsPage() {
                 <CardDescription>Commercial allowance, not user access.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1.5 text-sm">
-                {summariseEntitlements(sub.entitlements).map((e) => (
+                {summariseEntitlements([
+                  ...sub.entitlements,
+                  ...(sub.bundleAdditions ?? [])
+                    .filter((a) => a.status === "active")
+                    .flatMap((a) => bundleAdditionEntitlements(published, a)),
+                ]).map((e) => (
                   <div key={e.key} className="flex justify-between gap-3">
                     <span>{ENTITLEMENT_LABELS[e.key] ?? e.key}</span>
                     <span className="tabular text-right text-muted-foreground">
@@ -358,6 +420,13 @@ function TenantsPage() {
                 ))}
               </CardContent>
             </Card>
+
+            <WorkspaceBundleAddOns
+              published={published}
+              subscription={sub}
+              onAdd={(addition) => addBundleAddition(sub, addition)}
+              onActivate={(additionId) => activateBundleAddition(sub, additionId)}
+            />
 
             <Card>
               <CardHeader>
