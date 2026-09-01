@@ -4,10 +4,12 @@ import {
   Blocks,
   Boxes,
   Building2,
+  ExternalLink,
   Gauge,
   Globe2,
   LayoutDashboard,
   Layers,
+  Megaphone,
   Percent,
   Plug,
   Settings2,
@@ -42,6 +44,10 @@ const TENANT_NAV = [
   { to: "/pricing", label: "Public Pricing Preview", icon: Tags },
 ] as const;
 
+const DEMO_NAV = [
+  { to: "/aura/tally", label: "Aura + Tally (Product Demo)", icon: Megaphone, external: true },
+] as const;
+
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const {
@@ -71,6 +77,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
           <NavGroup title="Commercial configuration" items={CONFIG_NAV} pathname={pathname} />
           <NavGroup title="Tenant subscription" items={TENANT_NAV} pathname={pathname} />
+          <NavGroup title="Demos" items={DEMO_NAV} pathname={pathname} />
         </nav>
         <div className="border-t border-sidebar-border px-4 py-4 text-xs text-sidebar-foreground/70">
           <div>Published catalogue v{state.published.version}</div>
@@ -98,6 +105,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 <nav className="space-y-6 overflow-y-auto px-3 py-5">
                   <NavGroup title="Commercial configuration" items={CONFIG_NAV} pathname={pathname} />
                   <NavGroup title="Tenant subscription" items={TENANT_NAV} pathname={pathname} />
+                  <NavGroup title="Demos" items={DEMO_NAV} pathname={pathname} />
                 </nav>
               </SheetContent>
             </Sheet>
@@ -180,7 +188,7 @@ function NavGroup({
   pathname,
 }: {
   title: string;
-  items: readonly { to: string; label: string; icon: typeof Layers }[];
+  items: readonly { to: string; label: string; icon: typeof Layers; external?: boolean }[];
   pathname: string;
 }) {
   return (
@@ -205,6 +213,9 @@ function NavGroup({
               >
                 <Icon className="size-4" />
                 {item.label}
+                {item.external ? (
+                  <ExternalLink className="ml-auto size-3 opacity-60" />
+                ) : null}
               </Link>
             </li>
           );
