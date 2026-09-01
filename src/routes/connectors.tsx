@@ -54,7 +54,7 @@ function ConnectorsPage() {
     <AdminLayout>
       <PageHeader
         title="Connectors"
-        description="Standard Connectors are included within plan limits. Additional and Custom Connectors may carry a recurring fee, a one-time implementation fee, both, or a bespoke quote — connector economics are not assumed to be identical."
+        description="Every supported connector works with Aura. Standard Connectors are included within plan limits. Additional and Custom Connectors may carry a recurring fee, a one-time implementation fee, both, or a bespoke quote — connector economics are not assumed to be identical."
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -103,6 +103,7 @@ function ConnectorsPage() {
                 <TableHead>Setup</TableHead>
                 <TableHead>Commercial treatment</TableHead>
                 <TableHead>Impact (S / T / AI)</TableHead>
+                <TableHead>Standalone Aura offering</TableHead>
                 <TableHead>Active</TableHead>
               </TableRow>
             </TableHeader>
@@ -171,6 +172,27 @@ function ConnectorsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {c.storageImpact} / {c.transferImpact} / {c.intelligenceImpact}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={c.standaloneAuraOffering}
+                          aria-label={`${c.name} standalone Aura offering`}
+                          onCheckedChange={(v) =>
+                            patch(
+                              c.id,
+                              { standaloneAuraOffering: v },
+                              `${c.name} standalone Aura offering = ${v ? "Yes" : "No"}`,
+                            )
+                          }
+                        />
+                        <span className="font-medium">{c.standaloneAuraOffering ? "Yes" : "No"}</span>
+                      </div>
+                      <div className="mt-1 max-w-56 text-muted-foreground">
+                        {c.standaloneAuraOffering
+                          ? "Can be sold directly with Aura, without an Aurumi Workspace plan."
+                          : "Works with Aura, but only through an Aurumi Workspace plan."}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Switch

@@ -1,5 +1,6 @@
 import type {
   AddOn,
+  AuraOffer,
   AurumiApp,
   Catalogue,
   CommerceState,
@@ -252,6 +253,9 @@ export const CONNECTORS: Connector[] = CONNECTOR_SEEDS.map(
     hasRecurringPrice: rec !== null,
     hasOneTimePrice: once !== null,
     quoteOnly: classification === "Custom",
+    // Commercial availability as a standalone Aura offering. Every connector
+    // still works with Aura; only Tally may currently be sold with Aura alone.
+    standaloneAuraOffering: id === "conn.tally",
     ...(id === "conn.legacy-erp"
       ? {
           customCommercialTreatment:
@@ -347,6 +351,33 @@ const ADDON_USD: Record<string, number> = {
   "addon.transfer": 10,
 };
 
+export const AURA_OFFERS: AuraOffer[] = [
+  {
+    id: "aura.tally",
+    name: "Aura + Tally",
+    product: "aura",
+    connectorId: "conn.tally",
+    description:
+      "Talk to Your Business on top of Tally data — sold directly, without an Aurumi Workspace plan.",
+    status: "Available",
+    eligibleMarkets: ALL_MARKET_IDS,
+    includedUsers: 5,
+    includedIntelligence: 5000,
+    includedStorageGb: 25,
+    enabledAddOnIds: ["addon.users", "addon.intelligence", "addon.storage"],
+    connectorCommercialTerms:
+      "Tally bridge setup is Aurumi-assisted and included in the offer price; no separate Workspace connector fee applies.",
+    professionalServicesRequired: false,
+    quoteOnly: false,
+    active: true,
+  },
+];
+
+/** Offer price is set commercially — not Aura base price + connector price. */
+const AURA_OFFER_USD: Record<string, number | null> = {
+  "aura.tally": 29,
+};
+
 const PLAN_USD: Record<string, number | null> = Object.fromEntries(PLAN_DEFS.map((p) => [p.id, p.usd]));
 
 function round(value: number, currency: string) {
@@ -383,6 +414,7 @@ export const PRICES: PriceRule[] = [
     return rows;
   }),
   ...ADDONS.flatMap((a) => priceRows(a.id, ADDON_USD[a.id] ?? null, 15)),
+  ...AURA_OFFERS.flatMap((o) => priceRows(o.id, AURA_OFFER_USD[o.id] ?? null, 20, o.quoteOnly)),
 ];
 
 export const PROMOTIONS: Promotion[] = [
@@ -428,6 +460,7 @@ export function seedCatalogue(): Catalogue {
     apps: APPS,
     connectors: CONNECTORS,
     addOns: ADDONS,
+    auraOffers: AURA_OFFERS,
     markets: MARKETS,
     promotions: PROMOTIONS,
     prices: PRICES,

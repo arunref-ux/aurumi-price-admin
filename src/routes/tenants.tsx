@@ -58,7 +58,13 @@ function TenantsPage() {
   const needsQuote = (s: TenantSubscription) => s.lines.some((l) => l.quoteOnly);
 
   const tenantName = (id: string) => state.tenants.find((t) => t.id === id)?.name ?? id;
-  const planName = (id: string) => published.plans.find((p) => p.id === id)?.name ?? id;
+  /** Workspace subscriptions show the plan; standalone Aura shows the offer. */
+  const productName = (s: TenantSubscription) => {
+    if (s.productLine === "aura") {
+      return published.auraOffers?.find((o) => o.id === s.auraOfferId)?.name ?? "Standalone Aura";
+    }
+    return published.plans.find((p) => p.id === s.planId)?.name ?? s.planId;
+  };
 
   const transition = (
     s: TenantSubscription,
@@ -113,7 +119,7 @@ function TenantsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tenant</TableHead>
-                  <TableHead>Plan</TableHead>
+                  <TableHead>Product</TableHead>
                   <TableHead>Market</TableHead>
                   <TableHead>Cycle</TableHead>
                   <TableHead>Recurring</TableHead>
@@ -136,7 +142,12 @@ function TenantsPage() {
                     className={`cursor-pointer ${s.id === sub?.id ? "bg-secondary" : ""}`}
                   >
                     <TableCell className="font-medium">{tenantName(s.tenantId)}</TableCell>
-                    <TableCell>{planName(s.planId)}</TableCell>
+                    <TableCell>
+                      {productName(s)}
+                      <span className="block text-xs text-muted-foreground">
+                        {s.productLine === "aura" ? "Standalone Aura — no Workspace plan" : "Aurumi Workspace"}
+                      </span>
+                    </TableCell>
                     <TableCell>{s.market}</TableCell>
                     <TableCell>{s.billingCycle}</TableCell>
                     <TableCell className="tabular">{formatMoney(s.totals.recurringTotal, s.currency)}</TableCell>
@@ -168,7 +179,7 @@ function TenantsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                {tenantName(sub.tenantId)} · {planName(sub.planId)}
+                {tenantName(sub.tenantId)} · {productName(sub)}
               </CardTitle>
               <CardDescription>
                 {sub.market} · {sub.currency} · {sub.billingCycle} · created from catalogue v{sub.catalogueVersion}

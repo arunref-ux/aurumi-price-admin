@@ -31,6 +31,7 @@ const CONFIG_NAV = [
   { to: "/apps", label: "Aurumi Apps", icon: Blocks },
   { to: "/connectors", label: "Connectors", icon: Plug },
   { to: "/addons", label: "Capacity & Add-ons", icon: Boxes },
+  { to: "/aura-offers", label: "Standalone Aura Offers", icon: Sparkles },
   { to: "/markets", label: "Markets & Pricing", icon: Globe2 },
   { to: "/promotions", label: "Promotions", icon: Percent },
   { to: "/rules", label: "Subscription Rules", icon: ShieldCheck },
