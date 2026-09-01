@@ -419,9 +419,10 @@ CREATE TABLE promotion (
   end_date   date NOT NULL CHECK (end_date >= start_date),
   active boolean NOT NULL DEFAULT true,
   PRIMARY KEY (catalogue_id, id),
-  UNIQUE (catalogue_id, upper(code)),
   CHECK (type <> 'percentage' OR value <= 100)
 );
+-- promo codes are case-insensitively unique within a catalogue
+CREATE UNIQUE INDEX promotion_code_uniq ON promotion (catalogue_id, upper(code));
 
 CREATE TABLE promotion_plan  (catalogue_id uuid, promotion_id text, plan_id text,
   PRIMARY KEY (catalogue_id, promotion_id, plan_id),
