@@ -33,6 +33,7 @@ import {
   getAuraOffer,
   type AuraBillingCycle,
   type AuraMarketId,
+  type AuraPurchaseIntent,
 } from "@/lib/aura/offer";
 
 interface Turn {
@@ -77,15 +78,14 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const purchase = () => {
+    if (!offer) return;
     const intent = buildPurchaseIntent(offer, cycle, addOnQty);
     // Simulated purchase flow — no payment provider, no card collection.
     console.info("[simulated purchase intent]", intent);
-    toast.success(`Simulated checkout started — Aura + ${offer.connectorName}`, {
-      description: `${offer.marketName} · ${cycle === "annual" ? "Annual" : "Monthly"} · ${formatOfferMoney(
-        quote.cycleTotal,
-        quote.currency,
-      )}${cycle === "annual" ? " billed annually" : " per month"}. No payment is taken in this demo.`,
-    });
+    setPurchaseIntent(intent);
+    window.setTimeout(() => {
+      document.getElementById("aura-purchase-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const setQty = (id: string, qty: number, max: number) =>
