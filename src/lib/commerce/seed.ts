@@ -609,7 +609,9 @@ export function seedCatalogue(): Catalogue {
 export function seedState(): CommerceState {
   return {
     draft: seedCatalogue(),
-    published: seedCatalogue(),
+    // Bundles are a new commercial product: they start life in DRAFT only and
+    // become customer-facing exclusively through an explicit publish action.
+    published: { ...seedCatalogue(), bundles: [] },
     tenants: TENANTS,
     subscriptions: [],
     lastPublishedAt: null,

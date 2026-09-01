@@ -105,9 +105,13 @@ export function bundleCommercialComponents(
   });
 }
 
-/** Any required quote-only component forces DRAFT -> QUOTE REQUIRED. */
+/**
+ * Only a REQUIRED quote-only component forces DRAFT -> QUOTE REQUIRED.
+ * An optional quote-only component is a priceable extra the buyer can leave
+ * out, so it must not block the simulated payment path on its own.
+ */
 export function bundleQuoteReasons(components: ResolvedBundleComponent[]): string[] {
   return components
-    .filter((c) => c.treatment === "quote_required")
+    .filter((c) => c.treatment === "quote_required" && c.required)
     .map((c) => `${c.label}: quote required`);
 }

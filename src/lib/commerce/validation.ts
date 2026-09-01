@@ -1,5 +1,19 @@
 import { findPrice } from "./pricing";
+import { bundleComponents } from "./bundles";
 import type { BillingCycle, Catalogue, Connector, MarketId } from "./types";
+
+/** Any catalogue entity a commercial component may be priced against. */
+function productExists(catalogue: Catalogue, productId: string): boolean {
+  const base = productId.replace(/:setup$/, "");
+  return (
+    catalogue.plans.some((p) => p.id === base) ||
+    catalogue.apps.some((a) => a.id === base) ||
+    catalogue.connectors.some((c) => c.id === base) ||
+    catalogue.addOns.some((a) => a.id === base) ||
+    (catalogue.auraOffers ?? []).some((o) => o.id === base) ||
+    (catalogue.bundles ?? []).some((b) => b.id === base)
+  );
+}
 
 /** True when a connector has at least one calculable payable amount in this selection. */
 function hasCalculableAmount(catalogue: Catalogue, c: Connector, sel: Selection): boolean {
@@ -594,6 +608,140 @@ export function validateCatalogue(catalogue: Catalogue): Issue[] {
         message: `Promotion ${p.name} has an invalid date`,
         reason: "Start and end dates must be valid calendar dates (YYYY-MM-DD).",
       });
+    }
+  }
+
+  // Bundles must be commercially coherent before they can be published.
+  // A bundle packages existing connectors under its own price: we never require
+  // per-connector prices, a price sum, or availability in every market.
+  for (const b of catalogue.bundles ?? []) {
+    if (!b.active) continue;
+    const label = b.name || b.id;
+
+    if (!b.id || !b.slug || !b.name) {
+      issues.push({
+        id: `bundle.identity:${b.id || b.slug || "unknown"}`,
+        severity: "error",
+        message: `Bundle ${label} has an incomplete identity`,
+        reason: "A bundle needs an id, a URL slug and a name before it can be published.",
+      });
+    }
+
+    for (const id of b.connectorIds) {
+      if (!catalogue.connectors.some((c) => c.id === id)) {
+        issues.push({
+          id: `bundle.connector:${b.id}:${id}`,
+          severity: "error",
+          message: `${label} references a connector that no longer exists (${id})`,
+          reason: "Remove the reference or restore the connector before publishing.",
+        });
+      }
+    }
+
+    const components = bundleComponents(b);
+    if (!components.length || (!b.connectorIds.length && !components.length)) {
+      issues.push({
+        id: `bundle.empty:${b.id}`,
+        severity: "error",
+        message: `${label} packages nothing`,
+        reason: "A bundle must include at least one connector or commercial component.",
+      });
+    }
+    for (const c of components) {
+      if (c.connectorId && !catalogue.connectors.some((x) => x.id === c.connectorId)) {
+        issues.push({
+          id: `bundle.compconn:${b.id}:${c.id}`,
+          severity: "error",
+          message: `${label} component "${c.label}" points at a missing connector`,
+          reason: "Every bundle component must resolve to a catalogue connector.",
+        });
+      }
+      const needsProduct = c.treatment === "recurring" || c.treatment === "one_time";
+      if (needsProduct) {
+        if (!c.productId) {
+          issues.push({
+            id: `bundle.compproduct:${b.id}:${c.id}`,
+            severity: "error",
+            message: `${label} component "${c.label}" is payable but has no product`,
+            reason: "A recurring or one-time component must reference a priceable product.",
+          });
+        } else if (!productExists(catalogue, c.productId)) {
+          issues.push({
+            id: `bundle.compdangling:${b.id}:${c.id}`,
+            severity: "error",
+            message: `${label} component "${c.label}" references a product that does not exist (${c.productId})`,
+            reason: "Dangling commercial references cannot be priced.",
+          });
+        }
+      }
+    }
+
+    if (b.status === "Available") {
+      if (!b.eligibleMarkets.length) {
+        issues.push({
+          id: `bundle.nomarket:${b.id}`,
+          severity: "error",
+          message: `${label} is marked Available but sold in no market`,
+          reason: "Select the markets the bundle is offered in, or set its status back to Draft.",
+        });
+      }
+      for (const market of b.eligibleMarkets) {
+        const m = catalogue.markets.find((x) => x.id === market);
+        if (!m || !m.currency) {
+          issues.push({
+            id: `bundle.market:${b.id}:${market}`,
+            severity: "error",
+            message: `${label} is offered in an unknown market (${market})`,
+            reason: "Bundle markets must exist in the catalogue with a valid currency.",
+          });
+          continue;
+        }
+        if (b.quoteOnly) continue;
+        const rule = findPrice(catalogue, b.id, market);
+        if (!rule) {
+          issues.push({
+            id: `bundle.norule:${b.id}:${market}`,
+            severity: "error",
+            message: `${label} has no price row for ${m.name}`,
+            reason:
+              "Add pricing for this market, remove the market, or make the bundle quote-only there.",
+          });
+          continue;
+        }
+        if (rule.quoteOnly) continue;
+        const amounts: [string, number | null][] = [
+          ["monthly", rule.monthly],
+          ["annual", rule.annual],
+        ];
+        for (const [field, v] of amounts) {
+          if (v === null || v === undefined) {
+            issues.push({
+              id: `bundle.emptyprice:${b.id}:${market}:${field}`,
+              severity: "error",
+              message: `${label} has no ${field} price in ${m.name}`,
+              reason: "Both billing cycles need an amount unless the bundle is quote-only there.",
+            });
+          } else if (!Number.isFinite(v) || v < 0) {
+            issues.push({
+              id: `bundle.badprice:${b.id}:${market}:${field}`,
+              severity: "error",
+              message: `${label} has an invalid ${field} price in ${m.name}`,
+              reason: "Prices must be finite, non-negative numbers.",
+            });
+          }
+        }
+      }
+    }
+
+    for (const id of b.enabledAddOnIds) {
+      if (!catalogue.addOns.some((a) => a.id === id)) {
+        issues.push({
+          id: `bundle.addon:${b.id}:${id}`,
+          severity: "warning",
+          message: `${label} enables an add-on that no longer exists (${id})`,
+          reason: "Remove it from the bundle configuration.",
+        });
+      }
     }
   }
 
