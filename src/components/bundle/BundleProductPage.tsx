@@ -89,7 +89,7 @@ export function BundleProductPage({ config }: { config: BundlePageConfig }) {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const purchase = () => {
-    if (!offer) return;
+    if (!offer || !offer.availableDirectlyWithAura) return;
     // Simulated flow only — no payment provider, no card collection.
     const intent = buildBundlePurchaseIntent(offer, cycle, addOnQty);
     console.info("[simulated bundle purchase intent]", intent);
@@ -494,12 +494,28 @@ export function BundleProductPage({ config }: { config: BundlePageConfig }) {
                     </p>
                   ) : null}
 
-                  <Button className="mt-5 w-full" onClick={purchase}>
-                    {quote?.quoteRequired ? "Request a quote" : `Get ${offer.name}`}
-                  </Button>
-                  <p className="mt-2 text-center text-xs text-muted-foreground">
-                    Simulated checkout — no payment is taken and no card details are collected.
-                  </p>
+                  {offer.availableDirectlyWithAura ? (
+                    <>
+                      <Button className="mt-5 w-full" onClick={purchase}>
+                        {quote?.quoteRequired ? "Request a quote" : `Get ${offer.name}`}
+                      </Button>
+                      <p className="mt-2 text-center text-xs text-muted-foreground">
+                        Simulated checkout — no payment is taken and no card details are
+                        collected.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="mt-5 rounded-lg border border-border bg-muted px-3 py-3 text-center text-xs text-muted-foreground">
+                      {offer.availableAsWorkspaceAddon
+                        ? "This bundle is sold as an add-on to an existing Aurumi Workspace subscription. Speak to Aurumi to add it to your Workspace."
+                        : "This bundle is not currently available for purchase."}
+                    </div>
+                  )}
+                  {offer.availableDirectlyWithAura && offer.availableAsWorkspaceAddon ? (
+                    <p className="mt-2 text-center text-xs text-muted-foreground">
+                      Also available as an add-on to an existing Aurumi Workspace.
+                    </p>
+                  ) : null}
                 </CardContent>
               </Card>
             </div>
