@@ -2,6 +2,7 @@ import type {
   AddOn,
   AuraOffer,
   AurumiApp,
+  BundleOffer,
   Catalogue,
   CommerceState,
   Connector,
