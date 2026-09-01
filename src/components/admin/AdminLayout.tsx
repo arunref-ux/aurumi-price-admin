@@ -47,6 +47,7 @@ const TENANT_NAV = [
 
 const DEMO_NAV = [
   { to: "/aura/tally", label: "Aura + Tally (Product Demo)", icon: Megaphone, external: true },
+  { to: "/aura/quickbooks", label: "Aura + QuickBooks (Product Demo)", icon: Megaphone, external: true },
 ] as const;
 
 export function AdminLayout({ children }: { children: ReactNode }) {

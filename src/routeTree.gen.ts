@@ -23,6 +23,7 @@ import { Route as PromotionsRouteImport } from './routes/promotions'
 import { Route as RulesRouteImport } from './routes/rules'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TenantsRouteImport } from './routes/tenants'
+import { Route as AuraQuickbooksRouteImport } from './routes/aura.quickbooks'
 import { Route as AuraTallyRouteImport } from './routes/aura.tally'
 import { Route as SubscriptionsNewRouteImport } from './routes/subscriptions.new'
 
@@ -96,6 +97,11 @@ const TenantsRoute = TenantsRouteImport.update({
   path: '/tenants',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuraQuickbooksRoute = AuraQuickbooksRouteImport.update({
+  id: '/aura/quickbooks',
+  path: '/aura/quickbooks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuraTallyRoute = AuraTallyRouteImport.update({
   id: '/aura/tally',
   path: '/aura/tally',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
   '/tenants': typeof TenantsRoute
+  '/aura/quickbooks': typeof AuraQuickbooksRoute
   '/aura/tally': typeof AuraTallyRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
   '/tenants': typeof TenantsRoute
+  '/aura/quickbooks': typeof AuraQuickbooksRoute
   '/aura/tally': typeof AuraTallyRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/rules': typeof RulesRoute
   '/settings': typeof SettingsRoute
   '/tenants': typeof TenantsRoute
+  '/aura/quickbooks': typeof AuraQuickbooksRoute
   '/aura/tally': typeof AuraTallyRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
 }
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/tenants'
+    | '/aura/quickbooks'
     | '/aura/tally'
     | '/subscriptions/new'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/tenants'
+    | '/aura/quickbooks'
     | '/aura/tally'
     | '/subscriptions/new'
   id:
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/tenants'
+    | '/aura/quickbooks'
     | '/aura/tally'
     | '/subscriptions/new'
   fileRoutesById: FileRoutesById
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   RulesRoute: typeof RulesRoute
   SettingsRoute: typeof SettingsRoute
   TenantsRoute: typeof TenantsRoute
+  AuraQuickbooksRoute: typeof AuraQuickbooksRoute
   AuraTallyRoute: typeof AuraTallyRoute
   SubscriptionsNewRoute: typeof SubscriptionsNewRoute
 }
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TenantsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aura/quickbooks': {
+      id: '/aura/quickbooks'
+      path: '/aura/quickbooks'
+      fullPath: '/aura/quickbooks'
+      preLoaderRoute: typeof AuraQuickbooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/aura/tally': {
       id: '/aura/tally'
       path: '/aura/tally'
@@ -370,6 +390,7 @@ const rootRouteChildren: RootRouteChildren = {
   RulesRoute: RulesRoute,
   SettingsRoute: SettingsRoute,
   TenantsRoute: TenantsRoute,
+  AuraQuickbooksRoute: AuraQuickbooksRoute,
   AuraTallyRoute: AuraTallyRoute,
   SubscriptionsNewRoute: SubscriptionsNewRoute,
 }
