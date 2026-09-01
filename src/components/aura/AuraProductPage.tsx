@@ -359,6 +359,17 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
             automatically.
           </p>
 
+          {!offer || !quote ? (
+            <Card className="mt-10 border-border/70">
+              <CardContent className="p-8 text-center">
+                <p className="font-display text-lg font-semibold">Offer not available</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Aura + {connector.name} is not currently offered in this market. Please choose another
+                  market or contact us.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
           <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <Card className="border-border/70">
               <CardContent className="p-6 sm:p-8">
