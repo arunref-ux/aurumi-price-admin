@@ -226,6 +226,7 @@ const CONNECTOR_SEEDS: ConnSeed[] = [
   ["conn.stripe", "Stripe", "Payments", "Standard", "Payments, payouts and reconciliation.", null, null, "Low"],
   ["conn.razorpay", "Razorpay", "Payments", "Standard", "Payments and settlement reconciliation.", null, null, "Low"],
   ["conn.gworkspace", "Google Workspace", "Productivity", "Standard", "Identity, calendar and drive sync.", null, null, "Low"],
+  ["conn.gsheets", "Google Sheets", "Productivity", "Standard", "Spreadsheet-based business data, trackers and reporting.", null, null, "Low"],
   ["conn.m365", "Microsoft 365", "Productivity", "Standard", "Identity, mail and files sync.", null, null, "Low"],
   ["conn.delhivery", "Delhivery", "Logistics", "Additional", "Shipment booking and tracking.", 19, null, "Medium"],
   ["conn.sap", "SAP ECC / S4", "Data", "Custom", "Bespoke master-data and document integration.", null, null, "High"],
