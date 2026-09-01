@@ -55,9 +55,13 @@ function migrateV1(raw: string, base: CommerceState): CommerceState | null {
  * Forward-compatibility for prototype storage written before standalone Aura
  * offers existed: fill in the new commercial fields without discarding data.
  */
-function normaliseCatalogue(c: Catalogue): Catalogue {
+function normaliseCatalogue(c: Catalogue, scope: "draft" | "published"): Catalogue {
   const offers = Array.isArray(c.auraOffers) ? c.auraOffers : AURA_OFFERS;
-  const bundles = Array.isArray(c.bundles) && c.bundles.length ? c.bundles : BUNDLES;
+  // Seeded bundles may only enter the DRAFT catalogue. Normalisation must never
+  // make a new commercial product customer-facing without an explicit publish.
+  const storedBundles = Array.isArray(c.bundles) ? c.bundles : [];
+  const bundles =
+    storedBundles.length || scope === "published" ? storedBundles : BUNDLES;
   const connectors = Array.isArray(c.connectors) ? c.connectors : [];
   // Connectors and prices a bundle references must exist, even in catalogues
   // stored before bundles were introduced.
@@ -68,7 +72,8 @@ function normaliseCatalogue(c: Catalogue): Catalogue {
   const missingPrices = SEED_PRICES.filter(
     (sp) =>
       !prices.some((p) => p.productId === sp.productId && p.market === sp.market) &&
-      (sp.productId.startsWith("bundle.") || missingConnectors.some((mc) => sp.productId.startsWith(mc.id))),
+      ((scope === "draft" && sp.productId.startsWith("bundle.")) ||
+        missingConnectors.some((mc) => sp.productId.startsWith(mc.id))),
   );
   return {
     ...c,
