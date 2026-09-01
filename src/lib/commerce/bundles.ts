@@ -66,6 +66,28 @@ export function bundleComponents(bundle: BundleOffer): BundleOfferComponent[] {
 }
 
 /**
+ * Components that apply in ONE market. A component without eligibleMarkets
+ * applies everywhere the bundle is offered.
+ */
+export function bundleComponentsForMarket(
+  bundle: BundleOffer,
+  market: MarketId,
+): BundleOfferComponent[] {
+  return bundleComponents(bundle).filter(
+    (c) => !c.eligibleMarkets?.length || c.eligibleMarkets.includes(market),
+  );
+}
+
+/** Connector ids actually packaged in this market. */
+export function bundleConnectorIdsForMarket(bundle: BundleOffer, market: MarketId): string[] {
+  const scoped = bundleComponentsForMarket(bundle, market)
+    .filter((c) => c.kind === "connector" && c.connectorId)
+    .map((c) => c.connectorId!);
+  return scoped.length ? scoped : bundle.connectorIds;
+}
+
+
+/**
  * Resolve components against catalogue prices for one market. A priced
  * component whose amount cannot be calculated degrades to "quote_required"
  * rather than presenting a misleading zero.
