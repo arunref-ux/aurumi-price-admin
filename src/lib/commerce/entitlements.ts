@@ -1,3 +1,4 @@
+import { bundleConnectorIdsForMarket } from "./bundles";
 import type { AddOn, Catalogue, Entitlement, Plan, TenantSubscription, WorkspaceBundleAddition } from "./types";
 
 /**
