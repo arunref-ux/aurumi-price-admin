@@ -511,6 +511,19 @@ CREATE TABLE subscription_line (
   PRIMARY KEY (subscription_id, id)
 );
 
+-- entitlement SNAPSHOT frozen onto the subscription (TenantSubscription.entitlements).
+-- Live entitlements are still recomputed by deriveEntitlements(); this row set is
+-- the "as sold" record against the stamped catalogue version.
+CREATE TABLE subscription_entitlement (
+  id bigserial PRIMARY KEY,
+  subscription_id text NOT NULL REFERENCES tenant_subscription(id) ON DELETE CASCADE,
+  key    entitlement_key NOT NULL,
+  value  numeric,
+  label  text,
+  unit   text,
+  source text                                  -- free-text provenance (plan/addon/app/offer id)
+);
+
 CREATE TABLE subscription_change (
   id text PRIMARY KEY,
   subscription_id text NOT NULL REFERENCES tenant_subscription(id) ON DELETE CASCADE,
