@@ -579,6 +579,8 @@ export function seedCatalogue(): Catalogue {
     connectors: CONNECTORS,
     addOns: ADDONS,
     auraOffers: AURA_OFFERS,
+    bundles: BUNDLES,
+
     markets: MARKETS,
     promotions: PROMOTIONS,
     prices: PRICES,
