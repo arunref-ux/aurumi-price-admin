@@ -7,8 +7,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AURA_OFFERS, seedState } from "./seed";
+import {
+  AURA_OFFERS,
+  BUNDLES,
+  CONNECTORS as SEED_CONNECTORS,
+  PRICES as SEED_PRICES,
+  seedState,
+} from "./seed";
 import { auraOfferComponents } from "./aura";
+import { bundleComponents } from "./bundles";
 import { validateCatalogue, type Issue } from "./validation";
 import type { Catalogue, CommerceState, TenantSubscription } from "./types";
 
