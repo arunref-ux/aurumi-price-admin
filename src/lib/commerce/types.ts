@@ -190,6 +190,64 @@ export interface AuraOffer {
   active: boolean;
 }
 
+/* ---------------- Bundles ---------------- */
+
+/**
+ * A Bundle is a COMMERCIAL PACKAGING CONSTRUCT: one sellable offer that
+ * references several existing catalogue components (connectors today, apps
+ * later). It never changes what a connector is — the same connector record
+ * stays reusable in Workspace plans, standalone Aura offers and other bundles.
+ */
+export type BundleComponentKind =
+  | "bundle"
+  | "aura"
+  | "connector"
+  | "setup"
+  | "professional_services"
+  | "other";
+
+/** Reuses the Aura commercial-treatment vocabulary — one commercial model. */
+export interface BundleOfferComponent {
+  id: string;
+  label: string;
+  kind: BundleComponentKind;
+  treatment: AuraCommercialTreatment;
+  /** PriceRule productId — required for "recurring" and "one_time" components. */
+  productId?: string;
+  /** Catalogue connector id when this component packages a connector. */
+  connectorId?: string;
+  note?: string;
+  /** A required quote component forces DRAFT -> QUOTE REQUIRED. */
+  required: boolean;
+}
+
+export interface BundleOffer {
+  id: string;
+  /** URL segment used by the public bundle landing page. */
+  slug: string;
+  name: string;
+  positioning: string;
+  description: string;
+  /** Existing connector records included in this bundle — referenced, not copied. */
+  connectorIds: string[];
+  /** Reserved for later: Aurumi apps packaged in a bundle. */
+  appIds: string[];
+  /** Only these add-ons may be sold with this bundle. */
+  enabledAddOnIds: string[];
+  eligibleMarkets: MarketId[];
+  includedUsers: number | null;
+  includedIntelligence: number | null;
+  includedStorageGb: number | null;
+  components: BundleOfferComponent[];
+  commercialTerms: string;
+  status: "Draft" | "Available" | "Retired";
+  /** Bundle price cannot be calculated — DRAFT -> QUOTE REQUIRED. */
+  quoteOnly: boolean;
+  active: boolean;
+}
+
+
+
 export type AddOnUnit = "user" | "GB" | "AIC" | "TB";
 
 export interface AddOn {
