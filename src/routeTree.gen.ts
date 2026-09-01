@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AddonsRouteImport } from './routes/addons'
 import { Route as AppsRouteImport } from './routes/apps'
+import { Route as AuraOffersRouteImport } from './routes/aura-offers'
 import { Route as ChangesRouteImport } from './routes/changes'
 import { Route as ConnectorsRouteImport } from './routes/connectors'
 import { Route as EntitlementsRouteImport } from './routes/entitlements'
@@ -38,6 +39,11 @@ const AddonsRoute = AddonsRouteImport.update({
 const AppsRoute = AppsRouteImport.update({
   id: '/apps',
   path: '/apps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuraOffersRoute = AuraOffersRouteImport.update({
+  id: '/aura-offers',
+  path: '/aura-offers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChangesRoute = ChangesRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
+  '/aura-offers': typeof AuraOffersRoute
   '/changes': typeof ChangesRoute
   '/connectors': typeof ConnectorsRoute
   '/entitlements': typeof EntitlementsRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
+  '/aura-offers': typeof AuraOffersRoute
   '/changes': typeof ChangesRoute
   '/connectors': typeof ConnectorsRoute
   '/entitlements': typeof EntitlementsRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/addons': typeof AddonsRoute
   '/apps': typeof AppsRoute
+  '/aura-offers': typeof AuraOffersRoute
   '/changes': typeof ChangesRoute
   '/connectors': typeof ConnectorsRoute
   '/entitlements': typeof EntitlementsRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/addons'
     | '/apps'
+    | '/aura-offers'
     | '/changes'
     | '/connectors'
     | '/entitlements'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/addons'
     | '/apps'
+    | '/aura-offers'
     | '/changes'
     | '/connectors'
     | '/entitlements'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/addons'
     | '/apps'
+    | '/aura-offers'
     | '/changes'
     | '/connectors'
     | '/entitlements'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddonsRoute: typeof AddonsRoute
   AppsRoute: typeof AppsRoute
+  AuraOffersRoute: typeof AuraOffersRoute
   ChangesRoute: typeof ChangesRoute
   ConnectorsRoute: typeof ConnectorsRoute
   EntitlementsRoute: typeof EntitlementsRoute
@@ -246,6 +259,13 @@ declare module '@tanstack/react-router' {
       path: '/apps'
       fullPath: '/apps'
       preLoaderRoute: typeof AppsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aura-offers': {
+      id: '/aura-offers'
+      path: '/aura-offers'
+      fullPath: '/aura-offers'
+      preLoaderRoute: typeof AuraOffersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/changes': {
@@ -339,6 +359,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddonsRoute: AddonsRoute,
   AppsRoute: AppsRoute,
+  AuraOffersRoute: AuraOffersRoute,
   ChangesRoute: ChangesRoute,
   ConnectorsRoute: ConnectorsRoute,
   EntitlementsRoute: EntitlementsRoute,
