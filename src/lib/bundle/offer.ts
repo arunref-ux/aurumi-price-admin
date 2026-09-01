@@ -134,7 +134,7 @@ export function getBundleOffer({
   const quoteReasons = bundleQuoteReasons(resolved);
 
   const connectors: BundleConnectorView[] = published.connectorIds
-    .map((id) => {
+    .map((id): BundleConnectorView | null => {
       const c = catalogue.connectors.find((x) => x.id === id);
       if (!c) return null;
       const component = resolved.find((r) => r.connectorId === id);
@@ -144,7 +144,7 @@ export function getBundleOffer({
         category: c.category,
         description: c.description,
         treatment: component?.treatment ?? "included",
-      } satisfies BundleConnectorView;
+      };
     })
     .filter((c): c is BundleConnectorView => c !== null);
 
