@@ -16,8 +16,17 @@ import {
 import { useCommerce } from "@/lib/commerce/store";
 import { formatMoney } from "@/lib/commerce/pricing";
 import { CHARGE_CLASS_LABEL, type ChargeClass } from "@/lib/commerce/cart";
-import { ENTITLEMENT_LABELS, summariseEntitlements } from "@/lib/commerce/entitlements";
-import type { SubscriptionStatus, TenantSubscription } from "@/lib/commerce/types";
+import {
+  bundleAdditionEntitlements,
+  ENTITLEMENT_LABELS,
+  summariseEntitlements,
+} from "@/lib/commerce/entitlements";
+import { WorkspaceBundleAddOns } from "@/components/admin/WorkspaceBundleAddOns";
+import type {
+  SubscriptionStatus,
+  TenantSubscription,
+  WorkspaceBundleAddition,
+} from "@/lib/commerce/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/tenants")({
