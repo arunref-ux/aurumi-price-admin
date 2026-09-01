@@ -105,6 +105,54 @@ function TenantsPage() {
     toast.success(description);
   };
 
+  /** Bundle addition — the Workspace plan identity is never modified. */
+  const logEntry = (type: TenantSubscription["changeLog"][number]["type"], description: string) => {
+    const now = new Date().toISOString();
+    return {
+      id: `chg.${Math.random().toString(36).slice(2, 8)}`,
+      type,
+      description,
+      timing: "immediate" as const,
+      prorated: false,
+      effectiveDate: now,
+      createdAt: now,
+    };
+  };
+
+  const addBundleAddition = (s: TenantSubscription, addition: WorkspaceBundleAddition) => {
+    updateSubscription(s.id, (prev) => ({
+      ...prev,
+      bundleAdditions: [...(prev.bundleAdditions ?? []), addition],
+      changeLog: [
+        logEntry(
+          addition.status === "quote_required" ? "quote_requested" : "created",
+          addition.status === "quote_required"
+            ? `${addition.bundleName} added to Workspace — quote required`
+            : `${addition.bundleName} added to Workspace — awaiting simulated payment`,
+        ),
+        ...prev.changeLog,
+      ],
+    }));
+  };
+
+  const activateBundleAddition = (s: TenantSubscription, additionId: string) => {
+    updateSubscription(s.id, (prev) => {
+      const target = (prev.bundleAdditions ?? []).find((a) => a.id === additionId);
+      return {
+        ...prev,
+        bundleAdditions: (prev.bundleAdditions ?? []).map((a) =>
+          a.id === additionId ? { ...a, status: "active" as const } : a,
+        ),
+        changeLog: [
+          logEntry("activated", `Simulated payment succeeded — ${target?.bundleName ?? "bundle"} active`),
+          ...prev.changeLog,
+        ],
+      };
+    });
+    toast.success("Simulated payment succeeded — bundle added to the Workspace subscription");
+  };
+
+
   return (
     <AdminLayout>
       <PageHeader
