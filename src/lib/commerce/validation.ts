@@ -627,6 +627,21 @@ export function validateCatalogue(catalogue: Catalogue): Issue[] {
       });
     }
 
+    if (
+      typeof b.availableDirectlyWithAura !== "boolean" ||
+      typeof b.availableAsWorkspaceAddon !== "boolean"
+    ) {
+      issues.push({
+        id: `bundle.eligibility:${b.id}`,
+        severity: "error",
+        message: `${label} has undefined purchase eligibility`,
+        reason:
+          "Set both 'Available Directly with Aura' and 'Available as Workspace Add-on' to Yes or No.",
+      });
+    }
+
+
+
     for (const id of b.connectorIds) {
       if (!catalogue.connectors.some((c) => c.id === id)) {
         issues.push({

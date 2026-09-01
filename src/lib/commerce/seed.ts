@@ -484,6 +484,8 @@ export const BUNDLES: BundleOffer[] = [
       "The bundle is the commercial package: one recurring charge covers Aura and all four included connections. No separate Workspace connector fees apply while the bundle is active.",
     status: "Available",
     quoteOnly: false,
+    availableDirectlyWithAura: true,
+    availableAsWorkspaceAddon: true,
     active: true,
   },
 ];

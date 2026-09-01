@@ -243,8 +243,18 @@ export interface BundleOffer {
   status: "Draft" | "Available" | "Retired";
   /** Bundle price cannot be calculated — DRAFT -> QUOTE REQUIRED. */
   quoteOnly: boolean;
+  /**
+   * Commercial purchase eligibility — two independent permissions.
+   * A Workspace requirement is DERIVED, never stored:
+   *   requiresWorkspace = !availableDirectlyWithAura && availableAsWorkspaceAddon
+   */
+  /** Can be bought without an Aurumi Workspace, as a standalone Aura offering. */
+  availableDirectlyWithAura: boolean;
+  /** An existing Aurumi Workspace customer may add this bundle. */
+  availableAsWorkspaceAddon: boolean;
   active: boolean;
 }
+
 
 
 

@@ -127,6 +127,71 @@ function BundlesPage() {
                 <Separator />
 
                 <div>
+                  <p className="text-sm font-semibold">Purchase eligibility</p>
+                  <p className="text-xs text-muted-foreground">
+                    Two independent commercial permissions. A Workspace requirement is derived,
+                    never stored.
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <Label htmlFor={`aura-${b.id}`} className="text-sm">
+                        Available Directly with Aura
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {b.availableDirectlyWithAura ? "Yes" : "No"}
+                        </span>
+                        <Switch
+                          id={`aura-${b.id}`}
+                          checked={b.availableDirectlyWithAura}
+                          onCheckedChange={(v) =>
+                            patch(
+                              b.id,
+                              { availableDirectlyWithAura: v },
+                              `Set ${b.name} available directly with Aura to ${v ? "Yes" : "No"}`,
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <Label htmlFor={`wsaddon-${b.id}`} className="text-sm">
+                        Available as Workspace Add-on
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {b.availableAsWorkspaceAddon ? "Yes" : "No"}
+                        </span>
+                        <Switch
+                          id={`wsaddon-${b.id}`}
+                          checked={b.availableAsWorkspaceAddon}
+                          onCheckedChange={(v) =>
+                            patch(
+                              b.id,
+                              { availableAsWorkspaceAddon: v },
+                              `Set ${b.name} available as Workspace add-on to ${v ? "Yes" : "No"}`,
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {b.availableDirectlyWithAura && b.availableAsWorkspaceAddon
+                      ? "Purchasable standalone with Aura and as a Workspace add-on."
+                      : b.availableDirectlyWithAura
+                        ? "Aura-only bundle."
+                        : b.availableAsWorkspaceAddon
+                          ? "Workspace-only bundle."
+                          : "Not currently commercially available through either route."}
+                  </p>
+                </div>
+
+                <Separator />
+
+
+
+                <div>
                   <p className="text-sm font-semibold">Commercial components</p>
                   <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
                     {components.map((c) => (
