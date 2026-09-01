@@ -7,8 +7,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AURA_OFFERS, seedState } from "./seed";
+import {
+  AURA_OFFERS,
+  BUNDLES,
+  CONNECTORS as SEED_CONNECTORS,
+  PRICES as SEED_PRICES,
+  seedState,
+} from "./seed";
 import { auraOfferComponents } from "./aura";
+import { bundleComponents } from "./bundles";
 import { validateCatalogue, type Issue } from "./validation";
 import type { Catalogue, CommerceState, TenantSubscription } from "./types";
 
@@ -50,17 +57,33 @@ function migrateV1(raw: string, base: CommerceState): CommerceState | null {
  */
 function normaliseCatalogue(c: Catalogue): Catalogue {
   const offers = Array.isArray(c.auraOffers) ? c.auraOffers : AURA_OFFERS;
+  const bundles = Array.isArray(c.bundles) && c.bundles.length ? c.bundles : BUNDLES;
+  const connectors = Array.isArray(c.connectors) ? c.connectors : [];
+  // Connectors and prices a bundle references must exist, even in catalogues
+  // stored before bundles were introduced.
+  const missingConnectors = SEED_CONNECTORS.filter(
+    (sc) => !connectors.some((cc) => cc.id === sc.id),
+  );
+  const prices = Array.isArray(c.prices) ? c.prices : [];
+  const missingPrices = SEED_PRICES.filter(
+    (sp) =>
+      !prices.some((p) => p.productId === sp.productId && p.market === sp.market) &&
+      (sp.productId.startsWith("bundle.") || missingConnectors.some((mc) => sp.productId.startsWith(mc.id))),
+  );
   return {
     ...c,
     // Offers stored before explicit commercial components get the implicit
     // single Aura recurring charge, so nothing loses its commercial meaning.
     auraOffers: offers.map((o) => ({ ...o, components: auraOfferComponents(o) })),
-    connectors: (c.connectors ?? []).map((conn) => ({
+    bundles: bundles.map((b) => ({ ...b, components: bundleComponents(b) })),
+    connectors: [...connectors, ...missingConnectors].map((conn) => ({
       ...conn,
       standaloneAuraOffering: Boolean(conn.standaloneAuraOffering),
     })),
+    prices: [...prices, ...missingPrices],
   };
 }
+
 
 function normaliseState(s: CommerceState): CommerceState {
   return { ...s, draft: normaliseCatalogue(s.draft), published: normaliseCatalogue(s.published) };

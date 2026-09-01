@@ -25,6 +25,8 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TenantsRouteImport } from './routes/tenants'
 import { Route as AuraQuickbooksRouteImport } from './routes/aura.quickbooks'
 import { Route as AuraTallyRouteImport } from './routes/aura.tally'
+import { Route as BundlesIndexRouteImport } from './routes/bundles.index'
+import { Route as BundlesFinanceCashFlowRouteImport } from './routes/bundles.finance-cash-flow'
 import { Route as SubscriptionsNewRouteImport } from './routes/subscriptions.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -107,6 +109,16 @@ const AuraTallyRoute = AuraTallyRouteImport.update({
   path: '/aura/tally',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BundlesIndexRoute = BundlesIndexRouteImport.update({
+  id: '/bundles/',
+  path: '/bundles/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BundlesFinanceCashFlowRoute = BundlesFinanceCashFlowRouteImport.update({
+  id: '/bundles/finance-cash-flow',
+  path: '/bundles/finance-cash-flow',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubscriptionsNewRoute = SubscriptionsNewRouteImport.update({
   id: '/subscriptions/new',
   path: '/subscriptions/new',
@@ -130,7 +142,9 @@ export interface FileRoutesByFullPath {
   '/tenants': typeof TenantsRoute
   '/aura/quickbooks': typeof AuraQuickbooksRoute
   '/aura/tally': typeof AuraTallyRoute
+  '/bundles/finance-cash-flow': typeof BundlesFinanceCashFlowRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
+  '/bundles/': typeof BundlesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -149,7 +163,9 @@ export interface FileRoutesByTo {
   '/tenants': typeof TenantsRoute
   '/aura/quickbooks': typeof AuraQuickbooksRoute
   '/aura/tally': typeof AuraTallyRoute
+  '/bundles/finance-cash-flow': typeof BundlesFinanceCashFlowRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
+  '/bundles': typeof BundlesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -169,7 +185,9 @@ export interface FileRoutesById {
   '/tenants': typeof TenantsRoute
   '/aura/quickbooks': typeof AuraQuickbooksRoute
   '/aura/tally': typeof AuraTallyRoute
+  '/bundles/finance-cash-flow': typeof BundlesFinanceCashFlowRoute
   '/subscriptions/new': typeof SubscriptionsNewRoute
+  '/bundles/': typeof BundlesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -190,7 +208,9 @@ export interface FileRouteTypes {
     | '/tenants'
     | '/aura/quickbooks'
     | '/aura/tally'
+    | '/bundles/finance-cash-flow'
     | '/subscriptions/new'
+    | '/bundles/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -209,7 +229,9 @@ export interface FileRouteTypes {
     | '/tenants'
     | '/aura/quickbooks'
     | '/aura/tally'
+    | '/bundles/finance-cash-flow'
     | '/subscriptions/new'
+    | '/bundles'
   id:
     | '__root__'
     | '/'
@@ -228,7 +250,9 @@ export interface FileRouteTypes {
     | '/tenants'
     | '/aura/quickbooks'
     | '/aura/tally'
+    | '/bundles/finance-cash-flow'
     | '/subscriptions/new'
+    | '/bundles/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,7 +272,9 @@ export interface RootRouteChildren {
   TenantsRoute: typeof TenantsRoute
   AuraQuickbooksRoute: typeof AuraQuickbooksRoute
   AuraTallyRoute: typeof AuraTallyRoute
+  BundlesFinanceCashFlowRoute: typeof BundlesFinanceCashFlowRoute
   SubscriptionsNewRoute: typeof SubscriptionsNewRoute
+  BundlesIndexRoute: typeof BundlesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -365,6 +391,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuraTallyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bundles/': {
+      id: '/bundles/'
+      path: '/bundles'
+      fullPath: '/bundles/'
+      preLoaderRoute: typeof BundlesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bundles/finance-cash-flow': {
+      id: '/bundles/finance-cash-flow'
+      path: '/bundles/finance-cash-flow'
+      fullPath: '/bundles/finance-cash-flow'
+      preLoaderRoute: typeof BundlesFinanceCashFlowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subscriptions/new': {
       id: '/subscriptions/new'
       path: '/subscriptions/new'
@@ -392,7 +432,9 @@ const rootRouteChildren: RootRouteChildren = {
   TenantsRoute: TenantsRoute,
   AuraQuickbooksRoute: AuraQuickbooksRoute,
   AuraTallyRoute: AuraTallyRoute,
+  BundlesFinanceCashFlowRoute: BundlesFinanceCashFlowRoute,
   SubscriptionsNewRoute: SubscriptionsNewRoute,
+  BundlesIndexRoute: BundlesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
