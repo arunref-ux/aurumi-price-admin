@@ -438,8 +438,19 @@ export function AuraProductPage({ connector }: { connector: AuraConnectorConfig 
                             <div className="min-w-0">
                               <p className="text-sm font-medium">{a.name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {a.description} {formatOfferMoney(a.unitAmount, offer.currency)} per{" "}
-                                {a.unitSize.toLocaleString()} {a.unit} / month.
+                                {a.description}{" "}
+                                {cycle === "annual" ? (
+                                  <>
+                                    {formatOfferMoney(a.unitAmount * 10, offer.currency)} per{" "}
+                                    {a.unitSize.toLocaleString()} {a.unit} / year (
+                                    {formatOfferMoney(a.unitAmount, offer.currency)} / month equivalent).
+                                  </>
+                                ) : (
+                                  <>
+                                    {formatOfferMoney(a.unitAmount, offer.currency)} per{" "}
+                                    {a.unitSize.toLocaleString()} {a.unit} / month.
+                                  </>
+                                )}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
